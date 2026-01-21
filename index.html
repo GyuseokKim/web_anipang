@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Match-3 Puzzle (Anipang-style)</title>
+  <title>5x5 매치-3 퍼즐 (새/번호 테마)</title>
   <style>
     :root{
       --bg:#0b1220;
@@ -12,7 +12,7 @@
       --muted:#99a7c2;
       --accent:#6ee7ff;
       --danger:#ff6b6b;
-      --tile:58px;
+      --tile:64px;
       --gap:10px;
       --radius:16px;
     }
@@ -20,15 +20,16 @@
     body{
       margin:0; min-height:100vh;
       display:flex; justify-content:center; align-items:flex-start;
-      background:radial-gradient(1200px 700px at 50% -10%, #162449, var(--bg));
+      background:radial-gradient(1100px 650px at 50% -10%, #162449, var(--bg));
       font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", sans-serif;
       color:var(--ink);
       padding:24px 14px;
     }
     .wrap{width:min(520px, 100%);}
-    .header{
+    .topRow{
       display:flex; gap:12px; align-items:stretch; justify-content:space-between;
       margin-bottom:14px;
+      flex-wrap:wrap;
     }
     .panel{
       background:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
@@ -37,10 +38,13 @@
       padding:14px 14px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.25);
       flex:1;
+      min-width: 220px;
     }
-    .panel h1{
-      font-size:16px; margin:0 0 6px 0; letter-spacing:.2px;
-      display:flex; align-items:center; gap:8px;
+    .title{
+      display:flex; align-items:center; gap:10px;
+      margin:0 0 8px 0;
+      font-size:16px;
+      letter-spacing:.2px;
     }
     .badge{
       font-size:12px; padding:3px 8px; border-radius:999px;
@@ -51,13 +55,17 @@
       display:flex; gap:12px; flex-wrap:wrap;
       color:var(--muted); font-size:13px;
     }
-    .stats b{color:var(--ink); font-weight:700}
-    .actions{display:flex; gap:10px; align-items:center; justify-content:flex-end;}
+    .stats b{color:var(--ink); font-weight:800}
+    .actions{
+      display:flex; gap:10px; align-items:center; justify-content:flex-end;
+      flex:0 0 auto;
+      min-width: 220px;
+    }
     button{
       appearance:none; border:0; cursor:pointer;
       border-radius:14px;
       padding:10px 12px;
-      font-weight:700;
+      font-weight:800;
       color:var(--bg);
       background:linear-gradient(180deg, var(--accent), #3ad0ff);
       box-shadow:0 10px 20px rgba(58,208,255,0.25);
@@ -69,14 +77,10 @@
       background:transparent; color:var(--ink);
       border:1px solid rgba(255,255,255,0.16);
       box-shadow:none;
+      font-weight:800;
     }
-    .hint{
-      margin-top:10px;
-      color:var(--muted);
-      font-size:12.5px;
-      line-height:1.4;
-    }
-    .boardCard{
+
+    .card{
       margin-top:14px;
       background:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
       border:1px solid rgba(255,255,255,0.10);
@@ -84,10 +88,23 @@
       padding:14px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.25);
     }
+
+    .help{
+      color:var(--muted);
+      font-size:12.8px;
+      line-height:1.5;
+      margin:0;
+    }
+    .help b{color:var(--ink)}
+    .divider{
+      height:1px; background:rgba(255,255,255,0.10);
+      margin:12px 0;
+    }
+
     .board{
       display:grid;
-      grid-template-columns: repeat(8, var(--tile));
-      grid-template-rows: repeat(8, var(--tile));
+      grid-template-columns: repeat(5, var(--tile));
+      grid-template-rows: repeat(5, var(--tile));
       gap:var(--gap);
       justify-content:center;
       touch-action:none;
@@ -102,17 +119,37 @@
       width:var(--tile); height:var(--tile);
       border-radius:18px;
       display:flex; align-items:center; justify-content:center;
-      font-size:28px;
       background: rgba(255,255,255,0.06);
       border:1px solid rgba(255,255,255,0.10);
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
-      transition: transform .10s ease, outline-color .10s ease, filter .10s ease;
       position:relative;
+      transition: transform .10s ease, outline-color .10s ease, filter .10s ease, opacity .10s ease;
+      overflow:hidden;
     }
     .cell.selected{
       outline:3px solid rgba(110,231,255,0.75);
       transform: translateY(-1px) scale(1.03);
       filter: brightness(1.08);
+    }
+    .bird{
+      font-size:30px;
+      line-height:1;
+      transform: translateY(-2px);
+    }
+    .numBadge{
+      position:absolute;
+      right:8px; bottom:8px;
+      min-width:22px;
+      height:22px;
+      padding:0 7px;
+      border-radius:999px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:12px;
+      font-weight:900;
+      color:var(--ink);
+      background: rgba(0,0,0,0.30);
+      border:1px solid rgba(255,255,255,0.18);
+      backdrop-filter: blur(4px);
     }
     .cell.pop{
       animation: pop .18s ease-in-out;
@@ -127,385 +164,32 @@
       color:var(--muted);
       font-size:13px;
       min-height:18px;
+      text-align:center;
     }
     .danger{color:var(--danger)}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="header">
+    <div class="topRow">
       <div class="panel">
-        <h1>Match-3 Puzzle <span class="badge">GitHub Pages Ready</span></h1>
+        <div class="title">5×5 매치-3 퍼즐 <span class="badge">새/번호 테마</span></div>
         <div class="stats">
-          <div>Score: <b id="score">0</b></div>
-          <div>Moves: <b id="moves">25</b></div>
-          <div>Combo: <b id="combo">0</b></div>
-        </div>
-        <div class="hint">
-          • Click a tile then click an adjacent tile (or drag) to swap.<br/>
-          • Match 3+ → clear → drop → refill → chain combos.
+          <div>점수: <b id="score">0</b></div>
+          <div>이동: <b id="moves">15</b></div>
+          <div>콤보: <b id="combo">0</b></div>
         </div>
       </div>
       <div class="panel actions">
-        <button id="restart">New Game</button>
-        <button class="secondary" id="shuffle">Shuffle</button>
+        <button id="restart">새 게임</button>
+        <button class="secondary" id="shuffle">셔플</button>
       </div>
     </div>
 
-    <div class="boardCard">
-      <div class="board" id="board" aria-label="match-3 board"></div>
-      <div class="toast" id="toast"></div>
-    </div>
-  </div>
-
-<script>
-(() => {
-  const SIZE = 8;
-  const TYPES = ["🍎","🍇","🍋","🍒","🍉","🍍"];
-  const START_MOVES = 25;
-
-  let grid = [];
-  let score = 0;
-  let moves = START_MOVES;
-  let combo = 0;
-  let busy = false;
-
-  let sel = null;     // {r,c}
-  let dragFrom = null;
-
-  const $board = document.getElementById("board");
-  const $score = document.getElementById("score");
-  const $moves = document.getElementById("moves");
-  const $combo = document.getElementById("combo");
-  const $toast = document.getElementById("toast");
-  const $restart = document.getElementById("restart");
-  const $shuffle = document.getElementById("shuffle");
-
-  function setToast(msg, danger=false){
-    $toast.textContent = msg || "";
-    $toast.className = "toast" + (danger ? " danger" : "");
-  }
-  function updateHUD(){
-    $score.textContent = score;
-    $moves.textContent = moves;
-    $combo.textContent = combo;
-  }
-
-  const randInt = (n) => Math.floor(Math.random() * n);
-  const sleep = (ms) => new Promise(res => setTimeout(res, ms));
-  const inBounds = (r,c) => r>=0 && r<SIZE && c>=0 && c<SIZE;
-  const neighbors = (a,b) => (Math.abs(a.r-b.r) + Math.abs(a.c-b.c)) === 1;
-  const cellKey = (r,c) => `${r},${c}`;
-
-  function swap(a,b){
-    const t = grid[a.r][a.c];
-    grid[a.r][a.c] = grid[b.r][b.c];
-    grid[b.r][b.c] = t;
-  }
-
-  function createsMatchAt(r,c){
-    const t = grid[r][c];
-    if(c>=2 && grid[r][c-1]===t && grid[r][c-2]===t) return true;
-    if(r>=2 && grid[r-1][c]===t && grid[r-2][c]===t) return true;
-    return false;
-  }
-
-  function newGrid(){
-    grid = Array.from({length: SIZE}, () => Array.from({length: SIZE}, () => 0));
-    for(let r=0;r<SIZE;r++){
-      for(let c=0;c<SIZE;c++){
-        let tries = 0;
-        while(true){
-          grid[r][c] = randInt(TYPES.length);
-          if(!createsMatchAt(r,c)) break;
-          tries++; if(tries>20) break;
-        }
-      }
-    }
-  }
-
-  function render(){
-    $board.innerHTML = "";
-    for(let r=0;r<SIZE;r++){
-      for(let c=0;c<SIZE;c++){
-        const div = document.createElement("div");
-        div.className = "cell";
-        div.dataset.r = r;
-        div.dataset.c = c;
-        const v = grid[r][c];
-        div.textContent = v >= 0 ? TYPES[v] : "";
-        if(sel && sel.r===r && sel.c===c) div.classList.add("selected");
-        $board.appendChild(div);
-      }
-    }
-  }
-
-  function getCellEl(r,c){
-    return $board.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
-  }
-  function highlightPop(cells){
-    for(const {r,c} of cells){
-      const el = getCellEl(r,c);
-      if(el) el.classList.add("pop");
-    }
-  }
-
-  function findMatches(){
-    const toClear = new Set();
-
-    // Horizontal
-    for(let r=0;r<SIZE;r++){
-      let runStart = 0;
-      for(let c=1;c<=SIZE;c++){
-        const prev = grid[r][c-1];
-        const cur  = (c<SIZE ? grid[r][c] : null);
-        if(c<SIZE && cur === prev && prev !== -1){
-          continue;
-        } else {
-          const runLen = c - runStart;
-          if(prev !== -1 && runLen >= 3){
-            for(let k=runStart;k<c;k++) toClear.add(cellKey(r,k));
-          }
-          runStart = c;
-        }
-      }
-    }
-
-    // Vertical
-    for(let c=0;c<SIZE;c++){
-      let runStart = 0;
-      for(let r=1;r<=SIZE;r++){
-        const prev = grid[r-1][c];
-        const cur  = (r<SIZE ? grid[r][c] : null);
-        if(r<SIZE && cur === prev && prev !== -1){
-          continue;
-        } else {
-          const runLen = r - runStart;
-          if(prev !== -1 && runLen >= 3){
-            for(let k=runStart;k<r;k++) toClear.add(cellKey(k,c));
-          }
-          runStart = r;
-        }
-      }
-    }
-
-    const cells = [];
-    for(const key of toClear){
-      const [r,c] = key.split(",").map(Number);
-      cells.push({r,c});
-    }
-    return cells;
-  }
-
-  function clearCells(cells){
-    for(const {r,c} of cells) grid[r][c] = -1;
-  }
-
-  function applyGravity(){
-    for(let c=0;c<SIZE;c++){
-      let write = SIZE-1;
-      for(let r=SIZE-1;r>=0;r--){
-        if(grid[r][c] !== -1){
-          grid[write][c] = grid[r][c];
-          if(write !== r) grid[r][c] = -1;
-          write--;
-        }
-      }
-      for(let r=write;r>=0;r--) grid[r][c] = randInt(TYPES.length);
-    }
-  }
-
-  function hasAnyMoves(){
-    for(let r=0;r<SIZE;r++){
-      for(let c=0;c<SIZE;c++){
-        const a = {r,c};
-        const dirs = [{r:r+1,c},{r:r-1,c},{r,c:c+1},{r,c:c-1}];
-        for(const d of dirs){
-          if(!inBounds(d.r,d.c)) continue;
-          const b = {r:d.r,c:d.c};
-          swap(a,b);
-          const m = findMatches();
-          swap(a,b);
-          if(m.length>0) return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  function shuffleBoard(){
-    const flat = [];
-    for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++) flat.push(grid[r][c]);
-    for(let i=flat.length-1;i>0;i--){
-      const j = randInt(i+1);
-      [flat[i], flat[j]] = [flat[j], flat[i]];
-    }
-    let idx = 0;
-    for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++) grid[r][c] = flat[idx++];
-
-    for(let k=0;k<6;k++){
-      if(findMatches().length===0 && hasAnyMoves()) break;
-      for(let i=flat.length-1;i>0;i--){
-        const j = randInt(i+1);
-        [flat[i], flat[j]] = [flat[j], flat[i]];
-      }
-      idx=0;
-      for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++) grid[r][c] = flat[idx++];
-    }
-  }
-
-  async function resolveBoard(){
-    combo = 0;
-    while(true){
-      const matches = findMatches();
-      if(matches.length === 0) break;
-
-      combo++;
-      const gained = matches.length * 10 * combo;
-      score += gained;
-
-      highlightPop(matches);
-      updateHUD();
-      setToast(`Cleared ${matches.length}! +${gained} (Combo x${combo})`);
-
-      await sleep(140);
-      clearCells(matches);
-      render();
-
-      await sleep(90);
-      applyGravity();
-      render();
-      await sleep(90);
-    }
-
-    if(!hasAnyMoves()){
-      setToast("No more moves. Auto-shuffling…");
-      await sleep(250);
-      shuffleBoard();
-      render();
-      await resolveBoard();
-    } else {
-      setToast("");
-    }
-
-    updateHUD();
-  }
-
-  function clearSelection(){
-    sel = null;
-    render();
-  }
-
-  async function trySwap(a,b){
-    if(busy) return;
-    if(moves <= 0){
-      setToast("No moves left. Press New Game.", true);
-      return;
-    }
-    if(!neighbors(a,b)) return;
-
-    busy = true;
-    setToast("");
-    swap(a,b);
-    render();
-    await sleep(90);
-
-    const matches = findMatches();
-    if(matches.length === 0){
-      swap(a,b);
-      render();
-      setToast("Invalid swap (no match).", true);
-      busy = false;
-      return;
-    }
-
-    moves--;
-    updateHUD();
-    clearSelection();
-
-    await resolveBoard();
-
-    if(moves <= 0){
-      setToast(`Game Over! Final Score: ${score}`);
-    }
-    busy = false;
-  }
-
-  function cellPosFromEvent(evt){
-    const el = evt.target.closest(".cell");
-    if(!el) return null;
-    return { r: Number(el.dataset.r), c: Number(el.dataset.c) };
-  }
-
-  $board.addEventListener("pointerdown", (e) => {
-    if(busy) return;
-    const p = cellPosFromEvent(e);
-    if(!p) return;
-    dragFrom = p;
-    sel = p;
-    render();
-    $board.setPointerCapture(e.pointerId);
-  });
-
-  $board.addEventListener("pointermove", (e) => {
-    if(busy || !dragFrom) return;
-    const p = cellPosFromEvent(e);
-    if(!p) return;
-    if(neighbors(dragFrom, p)){
-      const a = dragFrom;
-      const b = p;
-      dragFrom = null;
-      trySwap(a,b);
-    }
-  });
-
-  $board.addEventListener("pointerup", (e) => {
-    if(busy) { dragFrom = null; return; }
-    const p = cellPosFromEvent(e);
-    if(!p) { dragFrom = null; return; }
-
-    if(sel && (sel.r !== p.r || sel.c !== p.c)){
-      const a = sel;
-      const b = p;
-      dragFrom = null;
-      trySwap(a,b);
-    } else {
-      sel = p;
-      render();
-    }
-    dragFrom = null;
-  });
-
-  $restart.addEventListener("click", async () => {
-    if(busy) return;
-    score = 0; moves = START_MOVES; combo = 0;
-    setToast("");
-    newGrid();
-    render();
-    busy = true;
-    await resolveBoard();
-    busy = false;
-    updateHUD();
-  });
-
-  $shuffle.addEventListener("click", async () => {
-    if(busy) return;
-    shuffleBoard();
-    render();
-    busy = true;
-    await resolveBoard();
-    busy = false;
-  });
-
-  function start(){
-    score = 0; moves = START_MOVES; combo = 0;
-    newGrid();
-    render();
-    busy = true;
-    resolveBoard().then(() => { busy = false; updateHUD(); });
-  }
-  start();
-})();
-</script>
-</body>
-</html>
+    <div class="card">
+      <p class="help">
+        <b>게임 방법</b><br/>
+        1) 타일을 <b>클릭 후</b> 인접 타일을 <b>클릭</b>하면 교환됩니다.<br/>
+        2) 또는 타일을 <b>드래그</b>해서 인접 타일과 교환할 수 있습니다.<br/>
+        3) 같은 새(번호)가 <b>가로/세로 3개 이상</b>이면 제거되고, 위에서 떨어져 채워집니다.<br/>
+        4) 연쇄로 매치가 이어지면 <b>콤보
