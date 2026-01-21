@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>성경 구절 순서 맞추기</title>
+
+<style>
+:root{
+  --bg:#0b1120; --card:#0f172a; --line:#1f2937;
+  --text:#e5e7eb; --sub:#9ca3af; --accent:#38bdf8;
+  --good:#22c55e; --bad:#ef4444; --warn:#f59e0b;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; padding:16px;
+  background:linear-gradient(180deg,#0b1120,#020617);
+  color:var(--text);
+  font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;
+}
+.wrap{max-width:960px;margin:auto}
+h1{font-size:22px;margin-bottom:12px}
+
+.card{
+  background:rgba(15,23,42,.95);
+  border:1px solid rgba(31,41,55,.8);
+  border-radius:16px;
+  padding:14px;
+  margin-bottom:12px;
+}
+
+label{font-size:12px;color:var(--sub)}
+select,button{
+  width:100%;
+  padding:10px;
+  border-radius:12px;
+  border:1px solid rgba(31,41,55,.9);
+  background:#0b1223;
+  color:var(--text);
+}
+button.primary{
+  background:rgba(56,189,248,.15);
+  border-color:rgba(56,189,248,.5);
+}
+button{cursor:pointer}
+
+.row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.row button{flex:1}
+
+.list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.item{
+  display:flex;gap:10px;
+  border:1px solid rgba(31,41,55,.8);
+  border-radius:14px;
+  padding:12px;
+  background:rgba(2,6,23,.45);
+}
+.meta{font-size:12px;color:var(--sub);margin-bottom:4px}
+.text{font-size:14px;line-height:1.5}
+
+.ctrl{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  align-items:center;
+}
+.ctrl button{
+  width:36px;
+  padding:6px 0;
+  border-radius:10px;
+  background:rgba(56,189,248,.12);
+  border:1px solid rgba(56,189,248,.35);
+}
+
+.status{
+  margin-top:10px;
+  padding:10px;
+  border-radius:12px;
+  border:1px dashed rgba(148,163,184,.4);
+}
+.status.good{color:#bbf7d0;border-color:rgba(34,197,94,.5)}
+.status.bad{color:#fecaca;border-color:rgba(239,68,68,.5)}
+.status.warn{color:#fde68a;border-color:rgba(245,158,11,.5)}
+
+.answerBox{
+  margin-top:12px;
+  padding:12px;
+  border-radius:14px;
+  border:1px solid rgba(56,189,248,.3);
+  background:rgba(56,189,248,.08);
+}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+<h1>성경 구절 순서 맞추기 (5절)</h1>
+
+<div class="card" id="selectArea">
+<label>권</label>
+<select id="bookSel"></select>
+
+<label>장</label>
+<select id="chapSel"></select>
+
+<label>절 (시작)</label>
+<select id="verseSel"></select>
+
+<button class="primary" id="startBtn" style="margin-top:10px">게임 시작</button>
+</div>
+
+<div class="card" id="gameArea" style="display:none">
+<div id="refTitle"></div>
+
+<div class="list" id="list"></div>
+
+<div class="row">
+<button class="primary" id="gradeBtn">채점</button>
+<button id="retryBtn">다시하기</button>
+</div>
+<div class="row">
+<button id="answerBtn">정답보기</button>
+<button id="nextBtn">다음</button>
+</div>
+<div class="row">
+<button id="selectBtn">선택 화면</button>
+</div>
+
+<div id="status" class="status" style="display:none"></div>
+
+<div id="answerBox" class="answerBox" style="display:none"></div>
+</div>
+</div>
+
+<script>
+// ===== 데이터 로드 =====
+let BIBLE = {};
+fetch("verses_krv.json")
+  .then(r=>r.json())
+  .then(j=>{BIBLE=j;init();})
+  .catch(()=>alert("verses_krv.json 파일이 필요합니다"));
+
+// ===== 상태 =====
+let correct=[], shuffled=[], current={};
+
+// ===== 초기화 =====
+function init(){
+  const bookSel=document.getElementById("bookSel");
+  bookSel.innerHTML=Object.keys(BIBLE).map(b=>`<option>${b}</option>`).join("");
+  bookSel.onchange=fillChapters;
+  fillChapters();
+}
+
+function fillChapters(){
+  const book=bookSel.value;
+  chapSel.innerHTML=Object.keys(BIBLE[book]).map(c=>`<option>${c}</option>`).join("");
+  fillVerses();
+}
+function fillVerses(){
+  const book=bookSel.value, chap=chapSel.value;
+  verseSel.innerHTML=Object.keys(BIBLE[book][chap]).map(v=>`<option>${v}</option>`).join("");
+}
+
+// ===== 게임 시작 =====
+startBtn.onclick=()=>{
+  current={book:bookSel.value,chap:chapSel.value,start:+verseSel.value};
+  startGame();
+};
+
+function startGame(){
+  const {book,chap,start}=current;
+  correct=[];
+  for(let i=0;i<5;i++){
+    const v=start+i;
+    if(!BIBLE[book][chap][v]){alert("5절이 연속되지 않습니다");return;}
+    correct.push({
+      id:`${v}`,
+      ref:`${book} ${chap}:${v}`,
+      text:BIBLE[book][chap][v]
+    });
+  }
+  shuffled=[...correct].sort(()=>Math.random()-0.5);
+  render();
+  selectArea.style.display="none";
+  gameArea.style.display="block";
+  refTitle.textContent=`${book} ${chap}:${start}~${start+4}`;
+}
+
+// ===== 렌더 =====
+function render(){
+  list.innerHTML="";
+  shuffled.forEach((it)=>{
+    const div=document.createElement("div");
+    div.className="item";
+
+    const ctrl=document.createElement("div");
+    ctrl.className="ctrl";
+
+    const up=document.createElement("button");
+    up.textContent="▲";
+    up.onclick=()=>move(it.id,-1);
+
+    const down=document.createElement("button");
+    down.textContent="▼";
+    down.onclick=()=>move(it.id,1);
+
+    ctrl.append(up,down);
+
+    const body=document.createElement("div");
+    body.innerHTML=`<div class="meta">${it.ref}</div><div class="text">${it.text}</div>`;
+
+    div.append(ctrl,body);
+    list.appendChild(div);
+  });
+}
+
+function move(id,dir){
+  const i=shuffled.findIndex(x=>x.id===id);
+  const j=i+dir;
+  if(j<0||j>=shuffled.length)return;
+  [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];
+  render();
+}
+
+// ===== 채점 =====
+gradeBtn.onclick=()=>{
+  const ok=shuffled.every((v,i)=>v.id===correct[i].id);
+  status.style.display="block";
+  status.className="status "+(ok?"good":"bad");
+  status.textContent=ok?"PASS ✅":"FAIL ❌";
+};
+
+// ===== 다시하기 =====
+retryBtn.onclick=()=>{shuffled=[...correct].sort(()=>Math.random()-0.5);render();};
+
+// ===== 정답 =====
+answerBtn.onclick=()=>{
+  answerBox.style.display="block";
+  answerBox.innerHTML=correct.map(v=>`<div>${v.ref} ${v.text}</div>`).join("");
+};
+
+// ===== 다음 =====
+nextBtn.onclick=()=>{
+  current.start+=5;
+  startGame();
+};
+
+// ===== 선택 =====
+selectBtn.onclick=()=>{
+  gameArea.style.display="none";
+  selectArea.style.display="block";
+  status.style.display="none";
+  answerBox.style.display="none";
+};
+</script>
+</body>
+</html>
