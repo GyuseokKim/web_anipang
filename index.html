@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>성경 구절 순서 맞추기 (5절)</title>
+  <style>
+    :root{
+      --bg:#0b1120; --card:#0f172a; --line:#1f2937;
+      --text:#e5e7eb; --sub:#9ca3af; --accent:#38bdf8;
+      --good:#22c55e; --bad:#ef4444; --warn:#f59e0b;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; padding:16px; background:linear-gradient(180deg,#0b1120,#020617);
+      color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,Noto Sans KR,sans-serif;
+    }
+    .wrap{max-width:980px; margin:0 auto}
+    h1{font-size:22px; margin:0 0 12px}
+    .grid{display:grid; grid-template-columns: 1fr; gap:12px}
+    @media(min-width:900px){ .grid{grid-template-columns: 360px 1fr;} }
+    .card{
+      background:rgba(15,23,42,.92); border:1px solid rgba(31,41,55,.8);
+      border-radius:16px; padding:14px; box-shadow:0 10px 30px rgba(0,0,0,.25);
+    }
+    label{display:block; font-size:12px; color:var(--sub); margin:10px 0 6px}
+    select, button{
+      width:100%; padding:10px 12px; border-radius:12px;
+      border:1px solid rgba(31,41,55,.9); background:#0b1223; color:var(--text);
+      font-size:14px;
+    }
+    button{cursor:pointer}
+    button.primary{background:rgba(56,189,248,.12); border-color:rgba(56,189,248,.35)}
+    button.ghost{background:transparent}
+    button:disabled{opacity:.5; cursor:not-allowed}
+    .row{display:flex; gap:10px; flex-wrap:wrap}
+    .row > button{flex:1 1 140px}
+    .hint{font-size:12px; color:var(--sub); line-height:1.45}
+    .status{
+      margin-top:10px; padding:10px 12px; border-radius:12px;
+      border:1px dashed rgba(148,163,184,.35);
+      background:rgba(2,6,23,.4);
+      font-size:14px;
+    }
+    .status.good{border-color:rgba(34,197,94,.45); color:#bbf7d0}
+    .status.bad{border-color:rgba(239,68,68,.45); color:#fecaca}
+    .status.warn{border-color:rgba(245,158,11,.45); color:#fde68a}
+
+    .list{
+      display:flex; flex-direction:column; gap:10px; margin-top:10px;
+    }
+    .item{
+      border:1px solid rgba(31,41,55,.85);
+      background:rgba(2,6,23,.45);
+      border-radius:14px; padding:12px;
+      display:flex; gap:10px; align-items:flex-start;
+    }
+    .handle{
+      width:28px; height:28px; border-radius:10px;
+      border:1px solid rgba(56,189,248,.35);
+      display:grid; place-items:center; color:var(--accent);
+      flex:0 0 auto; user-select:none;
+    }
+    .meta{font-size:12px; color:var(--sub); margin-bottom:6px}
+    .text{font-size:14px; line-height:1.55}
+    .dragging{opacity:.6}
+    .drop-target{outline:2px solid rgba(56,189,248,.55)}
+    .answerBox{
+      margin-top:12px; padding:12px; border-radius:14px;
+      border:1px solid rgba(56,189,248,.25);
+      background:rgba(56,189,248,.08);
+    }
+    .answerBox h3{margin:0 0 8px; font-size:14px; color:#bae6fd}
+    .answerLine{padding:8px 10px; border-radius:12px; border:1px solid rgba(31,41,55,.7); background:rgba(2,6,23,.35); margin-bottom:8px}
+    .answerLine:last-child{margin-bottom:0}
+    .pill{
+      display:inline-block; padding:4px 8px; border-radius:999px;
+      border:1px solid rgba(148,163,184,.25); color:var(--sub); font-size:12px;
+      margin-left:6px;
+    }
+    .small{font-size:12px; color:var(--sub)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>성경(개역개정) 구절 순서 맞추기 <span class="pill">5절</span></h1>
+
+    <div class="grid">
+      <!-- LEFT: Selection + Controls -->
+      <div class="card">
+        <div id="selArea">
+          <div class="hint">
+            ⚠️ 개역개정 “본문 텍스트”는 직접 넣어주세요.<br/>
+            이 페이지는 <b>verses_krv.json</b> 파일에서 구절을 로드합니다.
+          </div>
+
+          <label>권 (Book)</label>
+          <select id="bookSel"></select>
+
+          <label>장 (Chapter)</label>
+          <select id="chapSel"></select>
+
+          <label>절 (Verse) <span class="small">※ 선택한 절부터 연속 5절</span></label>
+          <select id="verseSel"></select>
+
+          <div style="height:10px"></div>
+          <button class="primary" id="startBtn">게임 시작</button>
+
+          <div class="status warn" style="margin-top:12px">
+            데이터가 없으면 샘플(dummy) 텍스트만 보입니다.  
+            <b>verses_krv.json</b>을 채우면 실제 구절로 플레이됩니다.
+          </div>
+        </div>
+
+        <div id="gameControls" style="display:none">
+          <div class="hint">
+            드래그해서 순서를 바꾼 뒤, <b>채점</b>을 누르세요.
+          </div>
+
+          <div class="row" style="margin-top:10px">
+            <button class="primary" id="gradeBtn">채점 (PASS/FAIL)</button>
+            <button id="retryBtn">다시하기 (섞기)</button>
+          </div>
+
+          <div class="row" style="margin-top:10px">
+            <button id="showAnsBtn">정답보기</button>
+            <button id="nextBtn">다음 (다음 5절)</button>
+          </div>
+
+          <div class="row" style="margin-top:10px">
+            <button class="ghost" id="selectBtn">선택 (권/장/절)</button>
+          </div>
+
+          <div id="statusBox" class="status" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Game Board -->
+      <div class="card">
+        <div class="hint">
+          <b id="refTitle">선택 후 시작하세요.</b><br/>
+          아래 카드들을 <b>드래그</b>해서 올바른 순서로 정렬합니다.
+        </div>
+
+        <div id="list" class="list" aria-label="shuffled verses"></div>
+
+        <div id="answerBox" class="answerBox" style="display:none">
+          <h3>정답(올바른 순서)</h3>
+          <div id="answerLines"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/**
+ * verses_krv.json format:
+ * {
+ *   "Genesis": { "1": { "1": "text", "2":"text", ... }, "2": {...} },
+ *   "Matthew": { "1": { "1":"text", ... } }
+ * }
+ *
+ * You can use Korean book names too, as keys.
+ */
+
+// --------- Minimal fallback sample (dummy text) ----------
+const FALLBACK = {
+  "창세기": {
+    "1": {
+      "1": "샘플 텍스트 1 (여기에 개역개정 1:1을 넣으세요)",
+      "2": "샘플 텍스트 2",
+      "3": "샘플 텍스트 3",
+      "4": "샘플 텍스트 4",
+      "5": "샘플 텍스트 5",
+      "6": "샘플 텍스트 6",
+      "7": "샘플 텍스트 7",
+      "8": "샘플 텍스트 8",
+      "9": "샘플 텍스트 9",
+      "10":"샘플 텍스트 10"
+    }
+  }
+};
+
+let BIBLE = null;
+
+// selection state
+let sel = { book:null, chap:null, startVerse:null };
+
+// game state
+let correctSet = [];  // [{ref, text, orderIndex}]
+let shuffled = [];    // same objects but reordered
+let currentStart = null; // numeric verse start for "next"
+let answerShown = false;
+
+// drag state
+let dragId = null;
+
+const $ = (id)=>document.getElementById(id);
+const bookSel = $("bookSel");
+const chapSel = $("chapSel");
+const verseSel = $("verseSel");
+const startBtn = $("startBtn");
+
+const selArea = $("selArea");
+const gameControls = $("gameControls");
+
+const listEl = $("list");
+const refTitle = $("refTitle");
+
+const gradeBtn = $("gradeBtn");
+const retryBtn = $("retryBtn");
+const showAnsBtn = $("showAnsBtn");
+const nextBtn = $("nextBtn");
+const selectBtn = $("selectBtn");
+const statusBox = $("statusBox");
+
+const answerBox = $("answerBox");
+const answerLines = $("answerLines");
+
+async function loadData(){
+  try{
+    const res = await fetch("./verses_krv.json", {cache:"no-store"});
+    if(!res.ok) throw new Error("no json");
+    const json = await res.json();
+    BIBLE = json;
+  }catch(e){
+    BIBLE = FALLBACK; // fallback to dummy
+  }
+}
+
+function getBooks(){
+  return Object.keys(BIBLE);
+}
+function getChapters(book){
+  return Object.keys(BIBLE[book] || {}).sort((a,b)=>Number(a)-Number(b));
+}
+function getVerses(book, chap){
+  const obj = (BIBLE[book] && BIBLE[book][chap]) ? BIBLE[book][chap] : {};
+  return Object.keys(obj).sort((a,b)=>Number(a)-Number(b));
+}
+
+function fillSelect(el, items, placeholder){
+  el.innerHTML = "";
+  for(const v of items){
+    const opt = document.createElement("option");
+    opt.value = v;
+    opt.textContent = v;
+    el.appendChild(opt);
+  }
+  if(items.length===0){
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = placeholder || "데이터 없음";
+    el.appendChild(opt);
+  }
+}
+
+function initSelectors(){
+  const books = getBooks();
+  fillSelect(bookSel, books, "권 없음");
+  sel.book = books[0] || null;
+
+  updateChapters();
+  bookSel.onchange = ()=>{ sel.book = bookSel.value; updateChapters(); };
+  chapSel.onchange = ()=>{ sel.chap = chapSel.value; updateVerses(); };
+  verseSel.onchange = ()=>{ sel.startVerse = verseSel.value; };
+}
+
+function updateChapters(){
+  const chaps = getChapters(bookSel.value);
+  fillSelect(chapSel, chaps, "장 없음");
+  sel.chap = chaps[0] || null;
+  updateVerses();
+}
+
+function updateVerses(){
+  const verses = getVerses(bookSel.value, chapSel.value);
+  // startVerse must allow "5 verses"
+  // We'll still show all verses; game start will validate.
+  fillSelect(verseSel, verses, "절 없음");
+  sel.startVerse = verses[0] || null;
+}
+
+function get5VerseSet(book, chap, startV){
+  const verses = getVerses(book, chap).map(v=>Number(v));
+  const s = Number(startV);
+  const idx = verses.indexOf(s);
+  if(idx < 0) return null;
+  const slice = verses.slice(idx, idx+5);
+  if(slice.length < 5) return null;
+
+  const obj = BIBLE[book][chap];
+  const set = slice.map((v,i)=>({
+    id: `${book}|${chap}|${v}`,
+    book, chap, verse: String(v),
+    ref: `${book} ${chap}:${v}`,
+    text: obj[String(v)] ?? "",
+    orderIndex: i
+  }));
+  return set;
+}
+
+function shuffleArray(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function renderList(items){
+  listEl.innerHTML = "";
+  for(const it of items){
+    const div = document.createElement("div");
+    div.className = "item";
+    div.draggable = true;
+    div.dataset.id = it.id;
+
+    div.addEventListener("dragstart", (e)=>{
+      dragId = it.id;
+      div.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+    });
+    div.addEventListener("dragend", ()=>{
+      dragId = null;
+      div.classList.remove("dragging");
+      document.querySelectorAll(".drop-target").forEach(x=>x.classList.remove("drop-target"));
+    });
+
+    div.addEventListener("dragover", (e)=>{
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      div.classList.add("drop-target");
+    });
+    div.addEventListener("dragleave", ()=>{
+      div.classList.remove("drop-target");
+    });
+
+    div.addEventListener("drop", (e)=>{
+      e.preventDefault();
+      div.classList.remove("drop-target");
+      if(!dragId || dragId === it.id) return;
+      // reorder shuffled array
+      const from = shuffled.findIndex(x=>x.id===dragId);
+      const to = shuffled.findIndex(x=>x.id===it.id);
+      if(from<0 || to<0) return;
+      const moved = shuffled.splice(from,1)[0];
+      shuffled.splice(to,0,moved);
+      renderList(shuffled);
+    });
+
+    const handle = document.createElement("div");
+    handle.className = "handle";
+    handle.textContent = "↕";
+
+    const content = document.createElement("div");
+    content.style.flex = "1 1 auto";
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.textContent = it.ref;
+
+    const text = document.createElement("div");
+    text.className = "text";
+    text.textContent = it.text || "(본문 텍스트 없음)";
+
+    content.appendChild(meta);
+    content.appendChild(text);
+
+    div.appendChild(handle);
+    div.appendChild(content);
+    listEl.appendChild(div);
+  }
+}
+
+function setStatus(type, msg){
+  statusBox.style.display = "block";
+  statusBox.className = "status" + (type ? ` ${type}` : "");
+  statusBox.textContent = msg;
+}
+
+function clearStatus(){
+  statusBox.style.display = "none";
+  statusBox.textContent = "";
+  statusBox.className = "status";
+}
+
+function showControls(showGame){
+  selArea.style.display = showGame ? "none" : "block";
+  gameControls.style.display = showGame ? "block" : "none";
+}
+
+function hideAnswer(){
+  answerShown = false;
+  answerBox.style.display = "none";
+  answerLines.innerHTML = "";
+}
+
+function renderAnswer(){
+  answerLines.innerHTML = "";
+  for(const it of correctSet){
+    const line = document.createElement("div");
+    line.className = "answerLine";
+    line.innerHTML = `<div class="meta">${escapeHtml(it.ref)}</div><div class="text">${escapeHtml(it.text || "(본문 텍스트 없음)")}</div>`;
+    answerLines.appendChild(line);
+  }
+  answerBox.style.display = "block";
+}
+
+function escapeHtml(s){
+  return String(s)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+function startGame(book, chap, startV){
+  const set = get5VerseSet(book, chap, startV);
+  if(!set){
+    setStatus("warn", "선택한 절부터 5절이 연속으로 존재해야 합니다. (마지막 부분이면 다른 절을 선택하세요)");
+    return;
+  }
+  clearStatus();
+  hideAnswer();
+
+  correctSet = set;
+  shuffled = shuffleArray(set);
+  currentStart = Number(startV);
+
+  refTitle.textContent = `${book} ${chap}:${startV} ~ ${book} ${chap}:${Number(startV)+4} (연속 5절)`;
+  renderList(shuffled);
+
+  showControls(true);
+}
+
+function grade(){
+  if(shuffled.length !== correctSet.length){
+    setStatus("warn","데이터가 올바르지 않습니다.");
+    return;
+  }
+  const ok = shuffled.every((it, idx)=> it.id === correctSet[idx].id);
+  if(ok){
+    setStatus("good","PASS ✅ 정답입니다!");
+  }else{
+    setStatus("bad","FAIL ❌ 순서가 틀렸습니다. 다시 정렬해 보세요.");
+  }
+}
+
+function retryShuffle(){
+  hideAnswer();
+  clearStatus();
+  shuffled = shuffleArray(correctSet);
+  renderList(shuffled);
+}
+
+function nextSet(){
+  hideAnswer();
+  clearStatus();
+  const book = sel.book, chap = sel.chap;
+  const nextStart = (currentStart ?? Number(sel.startVerse)) + 5;
+
+  // validate nextStart exists as a verse key
+  const verses = getVerses(book, chap).map(v=>Number(v));
+  if(!verses.includes(nextStart)){
+    setStatus("warn", "다음 5절이 없습니다. (장 끝) 다른 절을 선택하거나 다른 장/권을 선택하세요.");
+    return;
+  }
+  sel.startVerse = String(nextStart);
+  verseSel.value = String(nextStart);
+  currentStart = nextStart;
+  startGame(book, chap, String(nextStart));
+}
+
+function backToSelect(){
+  hideAnswer();
+  clearStatus();
+  listEl.innerHTML = "";
+  refTitle.textContent = "선택 후 시작하세요.";
+  showControls(false);
+}
+
+startBtn.addEventListener("click", ()=>{
+  sel.book = bookSel.value;
+  sel.chap = chapSel.value;
+  sel.startVerse = verseSel.value;
+  startGame(sel.book, sel.chap, sel.startVerse);
+});
+
+gradeBtn.addEventListener("click", grade);
+retryBtn.addEventListener("click", retryShuffle);
+
+showAnsBtn.addEventListener("click", ()=>{
+  if(!correctSet.length){
+    setStatus("warn","먼저 게임을 시작하세요.");
+    return;
+  }
+  answerShown = !answerShown;
+  if(answerShown){
+    renderAnswer();
+  }else{
+    hideAnswer();
+  }
+});
+
+nextBtn.addEventListener("click", nextSet);
+selectBtn.addEventListener("click", backToSelect);
+
+// boot
+(async function(){
+  await loadData();
+  initSelectors();
+})();
+</script>
+</body>
+</html>
