@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>성경 구절 순서 맞추기</title>
+  <style>
+    :root{
+      --bg:#0b1120; --card:#0f172a; --line:#1f2937;
+      --text:#e5e7eb; --sub:#9ca3af; --accent:#38bdf8;
+      --good:#22c55e; --bad:#ef4444; --warn:#f59e0b;
+      --shadow: 0 14px 40px rgba(0,0,0,.35);
+      --r: 18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; padding:16px;
+      background:linear-gradient(180deg,#0b1120,#020617);
+      color:var(--text);
+      font-family:system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    }
+    .wrap{max-width:980px;margin:0 auto}
+    h1{margin:0 0 12px;font-size:22px}
+    .grid{display:grid;gap:12px;grid-template-columns:1fr}
+    @media(min-width:920px){ .grid{grid-template-columns: 380px 1fr;} }
+
+    .card{
+      background:rgba(15,23,42,.95);
+      border:1px solid rgba(31,41,55,.85);
+      border-radius:var(--r);
+      padding:14px;
+      box-shadow:var(--shadow);
+    }
+    .sectionTitle{
+      font-size:14px;
+      color:#bae6fd;
+      margin:0 0 10px;
+      display:flex; align-items:center; gap:8px;
+    }
+    .pill{
+      display:inline-block;
+      font-size:12px;
+      padding:3px 8px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.25);
+      color:var(--sub);
+    }
+    label{display:block;font-size:12px;color:var(--sub);margin:10px 0 6px}
+    select,button{
+      width:100%;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(31,41,55,.9);
+      background:#0b1223;
+      color:var(--text);
+      font-size:14px;
+    }
+    button{cursor:pointer}
+    button.primary{background:rgba(56,189,248,.14); border-color:rgba(56,189,248,.38)}
+    button.ghost{background:transparent}
+    button:disabled{opacity:.55; cursor:not-allowed}
+
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .row > button{flex:1 1 120px}
+
+    .desc{
+      font-size:13px;
+      color:var(--sub);
+      line-height:1.55;
+      background:rgba(2,6,23,.35);
+      border:1px dashed rgba(148,163,184,.25);
+      padding:12px;
+      border-radius:14px;
+    }
+
+    /* game list */
+    .refLine{font-size:14px;color:#e0f2fe;margin:0 0 10px}
+    .list{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+    .item{
+      display:flex; gap:10px; align-items:flex-start;
+      border:1px solid rgba(31,41,55,.85);
+      background:rgba(2,6,23,.45);
+      border-radius:16px;
+      padding:12px;
+    }
+    .ctrl{
+      display:flex; flex-direction:column; gap:8px; align-items:center;
+      flex:0 0 auto;
+    }
+    .ctrl button{
+      width:38px;
+      padding:6px 0;
+      border-radius:12px;
+      background:rgba(56,189,248,.10);
+      border:1px solid rgba(56,189,248,.30);
+    }
+    .meta{font-size:12px;color:var(--sub);margin-bottom:6px}
+    .text{font-size:14px;line-height:1.6}
+    .mini{
+      font-size:12px;color:var(--sub); margin-top:8px;
+    }
+
+    /* modal */
+    .modalOverlay{
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      z-index:999;
+    }
+    .modal{
+      width:min(720px, 100%);
+      background:rgba(15,23,42,.98);
+      border:1px solid rgba(31,41,55,.9);
+      border-radius:20px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .modalHeader{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px;
+      padding:12px 14px;
+      border-bottom:1px solid rgba(31,41,55,.85);
+      background:rgba(2,6,23,.35);
+    }
+    .modalTitle{margin:0;font-size:15px;color:#bae6fd}
+    .modalBody{padding:14px}
+    .modalFooter{
+      padding:12px 14px;
+      border-top:1px solid rgba(31,41,55,.85);
+      background:rgba(2,6,23,.35);
+      display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;
+    }
+    .closeBtn{
+      width:auto;
+      padding:8px 10px;
+      border-radius:12px;
+      background:transparent;
+    }
+    .kv{display:grid;grid-template-columns: 140px 1fr; gap:8px 10px; font-size:13px}
+    .kv div{padding:8px 10px; border:1px solid rgba(31,41,55,.75); border-radius:12px; background:rgba(2,6,23,.35)}
+    .kv .k{color:var(--sub)}
+    .resultBadge{
+      display:inline-block;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.25);
+      font-size:13px;
+      margin-bottom:10px;
+    }
+    .success{border-color:rgba(34,197,94,.5); color:#bbf7d0; background:rgba(34,197,94,.12)}
+    .fail{border-color:rgba(239,68,68,.5); color:#fecaca; background:rgba(239,68,68,.12)}
+    .warn{border-color:rgba(245,158,11,.5); color:#fde68a; background:rgba(245,158,11,.12)}
+    .answerLine{
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(31,41,55,.75);
+      background:rgba(2,6,23,.35);
+      margin-bottom:10px;
+    }
+    .answerLine:last-child{margin-bottom:0}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>성경 구절 순서 맞추기 <span class="pill">5절</span></h1>
+
+    <div class="grid">
+      <!-- LEFT: Main Controls -->
+      <div class="card">
+        <!-- 선택 섹션 -->
+        <div>
+          <div class="sectionTitle">선택 섹션 <span class="pill">권 → 장 → 절</span></div>
+
+          <label>권 (Book)</label>
+          <select id="bookSel"></select>
+
+          <label>장 (Chapter)</label>
+          <select id="chapSel"></select>
+
+          <label>절 (Verse) <span class="pill">선택한 절부터 연속 5절</span></label>
+          <select id="verseSel"></select>
+        </div>
+
+        <div style="height:12px"></div>
+
+        <!-- 명령 버튼 섹션 -->
+        <div>
+          <div class="sectionTitle">명령 버튼 섹션</div>
+          <div class="row">
+            <button class="primary" id="startBtn">게임 시작</button>
+            <button id="checkBtn" disabled>결과 확인</button>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <button id="settingsBtn">게임 설정</button>
+            <button class="ghost" id="reshuffleBtn" disabled>다시하기(섞기)</button>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <button class="ghost" id="answerBtn" disabled>정답 화면</button>
+            <button class="ghost" id="nextBtn" disabled>다음 5절</button>
+          </div>
+        </div>
+
+        <div style="height:12px"></div>
+
+        <!-- 명령 설명 섹션 -->
+        <div>
+          <div class="sectionTitle">명령 설명 섹션</div>
+          <div class="desc">
+            1) 권→장→절을 선택하고 <b>게임 시작</b>을 누르세요.<br/>
+            2) 섞인 5절을 <b>▲/▼ 버튼</b>으로 올바른 순서로 정렬합니다.<br/>
+            3) <b>결과 확인</b>을 누르면 성공/실패 팝업이 뜹니다.<br/>
+            4) <b>다시하기(섞기)</b>: 같은 5절을 다시 섞습니다.<br/>
+            5) <b>정답 화면</b>: 올바른 순서로 5절을 보여줍니다.<br/>
+            6) <b>다음 5절</b>: 다음 묶음(5절)로 이동합니다.
+          </div>
+          <div class="mini">※ 본문 텍스트는 <b>verses_krv.json</b>에서 로드합니다.</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Game Execution -->
+      <div class="card">
+        <div class="sectionTitle">게임 실행 화면 섹션</div>
+        <p class="refLine" id="refTitle">선택 후 “게임 시작”을 눌러주세요.</p>
+        <div class="list" id="list"></div>
+        <div class="mini" id="gameHint">모바일에서는 ▲/▼로 순서를 이동하세요.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALS -->
+  <div class="modalOverlay" id="overlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modalHeader">
+        <h2 class="modalTitle" id="modalTitle">Popup</h2>
+        <button class="closeBtn" id="modalClose">닫기</button>
+      </div>
+      <div class="modalBody" id="modalBody"></div>
+      <div class="modalFooter" id="modalFooter"></div>
+    </div>
+  </div>
+
+<script>
+/* ========= Data ========= */
+/**
+ * verses_krv.json format:
+ * {
+ *   "창세기": { "1": { "1": "text", "2": "text" ... } },
+ *   "마태복음": { "5": { "1": "text" ... } }
+ * }
+ */
+const FALLBACK = {
+  "창세기": { "1": { "1":"샘플 1", "2":"샘플 2", "3":"샘플 3", "4":"샘플 4", "5":"샘플 5", "6":"샘플 6", "7":"샘플 7", "8":"샘플 8", "9":"샘플 9", "10":"샘플 10" } }
+};
+let BIBLE = null;
+
+/* ========= State ========= */
+let sel = { book:null, chap:null, startVerse:null };
+let correctSet = [];  // correct order
+let shuffled = [];    // current order
+let currentStart = null;
+
+const settings = {
+  verseCount: 5,          // fixed to 5 for now
+  showVerseRef: true,     // display references
+  autoShowResult: false   // if true, result popup opens right after reorder (not used here)
+};
+
+/* ========= DOM ========= */
+const $ = (id)=>document.getElementById(id);
+
+const bookSel = $("bookSel");
+const chapSel = $("chapSel");
+const verseSel = $("verseSel");
+
+const startBtn = $("startBtn");
+const checkBtn = $("checkBtn");
+const settingsBtn = $("settingsBtn");
+const reshuffleBtn = $("reshuffleBtn");
+const answerBtn = $("answerBtn");
+const nextBtn = $("nextBtn");
+
+const refTitle = $("refTitle");
+const listEl = $("list");
+
+const overlay = $("overlay");
+const modalTitle = $("modalTitle");
+const modalBody = $("modalBody");
+const modalFooter = $("modalFooter");
+const modalClose = $("modalClose");
+
+/* ========= Modal Helpers ========= */
+function openModal(title, bodyHtml, footerButtons=[]) {
+  modalTitle.textContent = title;
+  modalBody.innerHTML = bodyHtml;
+
+  modalFooter.innerHTML = "";
+  for (const btn of footerButtons) modalFooter.appendChild(btn);
+
+  overlay.style.display = "flex";
+}
+function closeModal() {
+  overlay.style.display = "none";
+  modalTitle.textContent = "Popup";
+  modalBody.innerHTML = "";
+  modalFooter.innerHTML = "";
+}
+modalClose.addEventListener("click", closeModal);
+overlay.addEventListener("click", (e)=>{ if(e.target === overlay) closeModal(); });
+
+function mkButton(text, cls, onClick) {
+  const b = document.createElement("button");
+  b.textContent = text;
+  if (cls) b.className = cls;
+  b.style.width = "auto";
+  b.addEventListener("click", onClick);
+  return b;
+}
+
+/* ========= Data Load ========= */
+async function loadData(){
+  try{
+    const res = await fetch("./verses_krv.json", {cache:"no-store"});
+    if(!res.ok) throw new Error("no json");
+    BIBLE = await res.json();
+  }catch(e){
+    BIBLE = FALLBACK;
+  }
+}
+
+/* ========= Select Fill ========= */
+function getBooks(){ return Object.keys(BIBLE || {}); }
+function getChapters(book){
+  return Object.keys((BIBLE && BIBLE[book]) || {}).sort((a,b)=>Number(a)-Number(b));
+}
+function getVerses(book, chap){
+  const obj = (BIBLE && BIBLE[book] && BIBLE[book][chap]) ? BIBLE[book][chap] : {};
+  return Object.keys(obj).sort((a,b)=>Number(a)-Number(b));
+}
+function fillSelect(el, items, placeholder){
+  el.innerHTML = "";
+  if(items.length === 0){
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = placeholder || "데이터 없음";
+    el.appendChild(opt);
+    return;
+  }
+  for(const v of items){
+    const opt = document.createElement("option");
+    opt.value = v;
+    opt.textContent = v;
+    el.appendChild(opt);
+  }
+}
+function initSelectors(){
+  const books = getBooks();
+  fillSelect(bookSel, books, "권 없음");
+  sel.book = books[0] || null;
+
+  updateChapters();
+
+  bookSel.onchange = ()=>{ sel.book = bookSel.value; updateChapters(); };
+  chapSel.onchange = ()=>{ sel.chap = chapSel.value; updateVerses(); };
+  verseSel.onchange = ()=>{ sel.startVerse = verseSel.value; };
+}
+function updateChapters(){
+  const chaps = getChapters(bookSel.value);
+  fillSelect(chapSel, chaps, "장 없음");
+  sel.chap = chaps[0] || null;
+  updateVerses();
+}
+function updateVerses(){
+  const verses = getVerses(bookSel.value, chapSel.value);
+  fillSelect(verseSel, verses, "절 없음");
+  sel.startVerse = verses[0] || null;
+}
+
+/* ========= Game Logic ========= */
+function getNVerseSet(book, chap, startV, n=5){
+  const verses = getVerses(book, chap).map(v=>Number(v));
+  const s = Number(startV);
+  const idx = verses.indexOf(s);
+  if(idx < 0) return null;
+  const slice = verses.slice(idx, idx+n);
+  if(slice.length < n) return null;
+
+  const obj = BIBLE[book][chap];
+  return slice.map((v,i)=>({
+    id: `${book}|${chap}|${v}`,
+    book, chap, verse: String(v),
+    ref: `${book} ${chap}:${v}`,
+    text: obj[String(v)] ?? "",
+    orderIndex: i
+  }));
+}
+function shuffleArray(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function enableGameButtons(enabled){
+  checkBtn.disabled = !enabled;
+  reshuffleBtn.disabled = !enabled;
+  answerBtn.disabled = !enabled;
+  nextBtn.disabled = !enabled;
+}
+
+function startGame(){
+  sel.book = bookSel.value;
+  sel.chap = chapSel.value;
+  sel.startVerse = verseSel.value;
+
+  const set = getNVerseSet(sel.book, sel.chap, sel.startVerse, settings.verseCount);
+  if(!set){
+    openAlert("알림 화면", "선택한 절부터 연속 5절이 존재해야 합니다. (장 끝 부분이면 다른 절을 선택하세요)");
+    return;
+  }
+
+  correctSet = set;
+  shuffled = shuffleArray(set);
+  currentStart = Number(sel.startVerse);
+
+  refTitle.textContent = `${sel.book} ${sel.chap}:${sel.startVerse} ~ ${sel.book} ${sel.chap}:${Number(sel.startVerse)+settings.verseCount-1}`;
+  renderList(shuffled);
+
+  enableGameButtons(true);
+}
+
+function moveItem(id, dir){
+  const i = shuffled.findIndex(x=>x.id===id);
+  const j = i + dir;
+  if(i < 0 || j < 0 || j >= shuffled.length) return;
+  [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  renderList(shuffled);
+}
+
+function renderList(items){
+  listEl.innerHTML = "";
+
+  for(const it of items){
+    const row = document.createElement("div");
+    row.className = "item";
+
+    // ▲▼ controls (mobile-friendly)
+    const ctrl = document.createElement("div");
+    ctrl.className = "ctrl";
+
+    const up = document.createElement("button");
+    up.type = "button";
+    up.textContent = "▲";
+    up.addEventListener("click", ()=> moveItem(it.id, -1));
+
+    const down = document.createElement("button");
+    down.type = "button";
+    down.textContent = "▼";
+    down.addEventListener("click", ()=> moveItem(it.id, +1));
+
+    ctrl.appendChild(up);
+    ctrl.appendChild(down);
+
+    // content
+    const content = document.createElement("div");
+    content.style.flex = "1 1 auto";
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.textContent = settings.showVerseRef ? it.ref : "";
+
+    const text = document.createElement("div");
+    text.className = "text";
+    text.textContent = it.text || "(본문 텍스트 없음)";
+
+    if(!settings.showVerseRef) meta.style.display = "none";
+
+    content.appendChild(meta);
+    content.appendChild(text);
+
+    row.appendChild(ctrl);
+    row.appendChild(content);
+    listEl.appendChild(row);
+  }
+}
+
+function isCorrectOrder(){
+  if(shuffled.length !== correctSet.length) return false;
+  return shuffled.every((it, idx)=> it.id === correctSet[idx].id);
+}
+
+/* ========= Popups ========= */
+function openSettings(){
+  const body = `
+    <div class="kv">
+      <div class="k">구절 개수</div><div>5 (고정)</div>
+      <div class="k">참조 표시</div>
+      <div>
+        <label style="margin:0; display:flex; gap:8px; align-items:center; color:var(--text)">
+          <input type="checkbox" id="showRefChk" ${settings.showVerseRef ? "checked":""}/>
+          구절 참조(권 장:절) 표시
+        </label>
+      </div>
+    </div>
+    <div style="height:10px"></div>
+    <div class="desc">
+      설정은 즉시 적용됩니다. (데이터는 <b>verses_krv.json</b>에서 로드)
+    </div>
+  `;
+
+  const saveBtn = mkButton("저장", "primary", ()=>{
+    const chk = document.getElementById("showRefChk");
+    settings.showVerseRef = !!chk?.checked;
+    if(shuffled.length) renderList(shuffled);
+    closeModal();
+    openAlert("알림 화면", "설정이 저장되었습니다.");
+  });
+
+  const cancelBtn = mkButton("취소", "", closeModal);
+
+  openModal("게임 설정", body, [cancelBtn, saveBtn]);
+}
+
+function openResult(){
+  if(!correctSet.length){
+    openAlert("알림 화면", "먼저 게임을 시작하세요.");
+    return;
+  }
+  const ok = isCorrectOrder();
+  const badge = ok
+    ? `<div class="resultBadge success">성공 (PASS) ✅</div>`
+    : `<div class="resultBadge fail">실패 (FAIL) ❌</div>`;
+
+  const body = `
+    ${badge}
+    <div class="desc">
+      ${ok ? "정답 순서입니다!" : "순서가 맞지 않습니다. ▲/▼로 다시 정렬해 보세요."}
+    </div>
+  `;
+
+  const closeBtn = mkButton("닫기", "", closeModal);
+  const answerBtn2 = mkButton("정답 보기", "primary", ()=>{
+    closeModal();
+    openAnswer();
+  });
+  openModal("게임 결과", body, [closeBtn, answerBtn2]);
+}
+
+function openAnswer(){
+  if(!correctSet.length){
+    openAlert("알림 화면", "먼저 게임을 시작하세요.");
+    return;
+  }
+  const lines = correctSet.map(v=>`
+    <div class="answerLine">
+      <div class="meta">${escapeHtml(v.ref)}</div>
+      <div class="text">${escapeHtml(v.text || "(본문 텍스트 없음)")}</div>
+    </div>
+  `).join("");
+
+  const body = `
+    <div class="desc">아래는 올바른 순서(정답)입니다.</div>
+    <div style="height:10px"></div>
+    ${lines}
+  `;
+
+  const closeBtn = mkButton("닫기", "", closeModal);
+  openModal("정답 화면", body, [closeBtn]);
+}
+
+function openAlert(title, msg){
+  const body = `
+    <div class="resultBadge warn">알림</div>
+    <div class="desc">${escapeHtml(msg)}</div>
+  `;
+  const okBtn = mkButton("확인", "primary", closeModal);
+  openModal(title, body, [okBtn]);
+}
+
+function escapeHtml(s){
+  return String(s)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+/* ========= Buttons ========= */
+startBtn.addEventListener("click", startGame);
+checkBtn.addEventListener("click", openResult);
+settingsBtn.addEventListener("click", openSettings);
+
+reshuffleBtn.addEventListener("click", ()=>{
+  if(!correctSet.length){ openAlert("알림 화면","먼저 게임을 시작하세요."); return; }
+  shuffled = shuffleArray(correctSet);
+  renderList(shuffled);
+  openAlert("알림 화면", "다시 섞었습니다.");
+});
+
+answerBtn.addEventListener("click", openAnswer);
+
+nextBtn.addEventListener("click", ()=>{
+  if(!correctSet.length){
+    openAlert("알림 화면","먼저 게임을 시작하세요.");
+    return;
+  }
+  const nextStart = (currentStart ?? Number(sel.startVerse)) + settings.verseCount;
+  const verses = getVerses(sel.book, sel.chap).map(v=>Number(v));
+  if(!verses.includes(nextStart)){
+    openAlert("알림 화면","다음 5절이 없습니다. (장 끝) 다른 절 또는 다른 장/권을 선택하세요.");
+    return;
+  }
+  // move selector to next
+  currentStart = nextStart;
+  verseSel.value = String(nextStart);
+  sel.startVerse = String(nextStart);
+  startGame();
+});
+
+/* ========= Boot ========= */
+(async function(){
+  await loadData();
+  initSelectors();
+  enableGameButtons(false);
+})();
+</script>
+</body>
+</html>
