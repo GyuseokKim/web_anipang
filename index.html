@@ -370,55 +370,72 @@ function normalizeBibleJson(json){
 }
 
 async function loadData(){
-  // file:// 로 열면 fetch가 막히는 경우가 많음
+  // 1) file:// 실행이면 fetch가 거의 막힙니다.
   if (location.protocol === "file:") {
     BIBLE = FALLBACK;
-    // 여기서 바로 팝업 띄우기 위해, 부팅 후 initSelectors 전에 호출될 수 있으니
-    // 약간 지연시켜 UI 준비 후 알림 표시
     setTimeout(() => {
       openAlert(
         "알림 화면",
-        "현재 file:// 로 실행 중이라 verse_krv.json을 fetch로 읽을 수 없습니다.\n\n" +
-        "해결: GitHub Pages로 실행하거나, 로컬 서버(예: VSCode Live Server)로 실행하세요.\n\n" +
-        "또는 index.html과 verse_krv.json을 같은 폴더(루트)에 두었는지 확인하세요."
+        "현재 file:// 로 실행 중이라 JSON을 fetch로 읽을 수 없습니다.\n\n" +
+        "해결:\n" +
+        "1) GitHub Pages URL로 실행하거나\n" +
+        "2) 로컬 서버(VSCode Live Server)로 실행하세요."
       );
     }, 50);
     return;
   }
 
-  try{
-    // ✅ 반드시 이 파일명을 사용합니다
-    const res = await fetch("./verse_krv.json", { cache:"no-store" });
+  // 2) 후보 경로/파일명들을 순서대로 시도
+  const candidates = [
+    "./verse_krv.json",
+    "./verses_krv.json",
+    "/verse_krv.json",
+    "/verses_krv.json"
+  ];
 
-    if(!res.ok){
-      throw new Error(`HTTP ${res.status} ${res.statusText}`);
+  let lastErr = null;
+
+  for (const path of candidates) {
+    try {
+      const res = await fetch(path, { cache: "no-store" });
+      if (!res.ok) throw new Error(`${path} -> HTTP ${res.status} ${res.statusText}`);
+
+      const raw = await res.json();
+      const normalized = normalizeBibleJson(raw);
+
+      if (!normalized || Object.keys(normalized).length === 0) {
+        throw new Error(`${path} -> loaded but normalized is empty`);
+      }
+
+      // ✅ 성공!
+      BIBLE = normalized;
+
+      // (선택) 성공 알림이 필요하면 아래 주석 해제
+      // setTimeout(() => openAlert("알림 화면", `JSON 로드 성공: ${path}`), 50);
+
+      return;
+    } catch (e) {
+      lastErr = e;
+      console.error("JSON load attempt failed:", e);
     }
-
-    const raw = await res.json();
-    BIBLE = normalizeBibleJson(raw);
-
-    // ✅ 로딩 성공했는데도 book이 비어있으면 구조 문제
-    if (!BIBLE || Object.keys(BIBLE).length === 0) {
-      throw new Error("JSON loaded but normalized result is empty.");
-    }
-  }catch(e){
-    console.error("Failed to load verse_krv.json:", e);
-    BIBLE = FALLBACK;
-    setTimeout(() => {
-      openAlert(
-        "알림 화면",
-        "verse_krv.json을 로드하지 못했습니다.\n\n" +
-        "체크:\n" +
-        "1) index.html과 verse_krv.json이 같은 폴더(루트)에 있는지\n" +
-        "2) 파일명이 정확히 'verse_krv.json'인지\n" +
-        "3) GitHub Pages 주소에서 직접 열고 있는지(파일 더블클릭 X)\n" +
-        "4) JSON 문법 오류가 없는지\n\n" +
-        "개발자콘솔(F12)에서 오류 로그도 확인하세요."
-      );
-    }, 50);
   }
-}
 
+  // 3) 전부 실패하면 fallback + 상세 알림
+  BIBLE = FALLBACK;
+  setTimeout(() => {
+    openAlert(
+      "알림 화면",
+      "verse_krv.json 로드 실패.\n\n" +
+      "시도한 경로:\n" + candidates.join("\n") + "\n\n" +
+      "마지막 오류:\n" + String(lastErr || "unknown") + "\n\n" +
+      "체크:\n" +
+      "1) index.html과 verse_krv.json이 같은 위치(루트)인지\n" +
+      "2) GitHub Pages 설정이 main/root로 되어있는지\n" +
+      "3) 파일이 커밋/푸시 되었는지\n" +
+      "4) 브라우저 개발자도구(Network)에서 JSON 요청이 404인지 확인"
+    );
+  }, 50);
+}
 
 /* ========= Select Fill ========= */
 function getBooks(){ return Object.keys(BIBLE || {}); }
