@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>성경 구절 순서 맞추기</title>
+  <title>Bible Verse Ordering Game (v01)</title>
   <style>
     :root{
       --bg:#0b1120; --card:#0f172a; --line:#1f2937;
@@ -11,6 +11,10 @@
       --good:#22c55e; --bad:#ef4444; --warn:#f59e0b;
       --shadow: 0 14px 40px rgba(0,0,0,.35);
       --r: 18px;
+
+      /* dynamic verse font size */
+      --verse-font: 14px;
+      --verse-meta-font: 12px;
     }
     *{box-sizing:border-box}
     body{
@@ -19,10 +23,22 @@
       color:var(--text);
       font-family:system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
     }
-    .wrap{max-width:980px;margin:0 auto}
-    h1{margin:0 0 12px;font-size:22px}
+    .wrap{max-width:1100px;margin:0 auto}
+    h1{margin:0 0 12px;font-size:20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .pill{
+      display:inline-block;
+      font-size:12px;
+      padding:3px 8px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.25);
+      color:var(--sub);
+    }
+
+    /* requirement v01: Selection + Command Buttons + Game Execution on one screen */
     .grid{display:grid;gap:12px;grid-template-columns:1fr}
-    @media(min-width:920px){ .grid{grid-template-columns: 380px 1fr;} }
+    @media(min-width:980px){
+      .grid{grid-template-columns: 420px 1fr;}
+    }
 
     .card{
       background:rgba(15,23,42,.95);
@@ -36,14 +52,6 @@
       color:#bae6fd;
       margin:0 0 10px;
       display:flex; align-items:center; gap:8px;
-    }
-    .pill{
-      display:inline-block;
-      font-size:12px;
-      padding:3px 8px;
-      border-radius:999px;
-      border:1px solid rgba(148,163,184,.25);
-      color:var(--sub);
     }
     label{display:block;font-size:12px;color:var(--sub);margin:10px 0 6px}
     select,button{
@@ -61,20 +69,11 @@
     button:disabled{opacity:.55; cursor:not-allowed}
 
     .row{display:flex;gap:10px;flex-wrap:wrap}
-    .row > button{flex:1 1 120px}
-
-    .desc{
-      font-size:13px;
-      color:var(--sub);
-      line-height:1.55;
-      background:rgba(2,6,23,.35);
-      border:1px dashed rgba(148,163,184,.25);
-      padding:12px;
-      border-radius:14px;
-    }
+    .row > button{flex:1 1 140px}
 
     /* game list */
     .refLine{font-size:14px;color:#e0f2fe;margin:0 0 10px}
+    .mini{font-size:12px;color:var(--sub);margin-top:8px}
     .list{display:flex;flex-direction:column;gap:10px;margin-top:8px}
     .item{
       display:flex; gap:10px; align-items:flex-start;
@@ -88,17 +87,14 @@
       flex:0 0 auto;
     }
     .ctrl button{
-      width:38px;
+      width:40px;
       padding:6px 0;
       border-radius:12px;
       background:rgba(56,189,248,.10);
       border:1px solid rgba(56,189,248,.30);
     }
-    .meta{font-size:12px;color:var(--sub);margin-bottom:6px}
-    .text{font-size:14px;line-height:1.6}
-    .mini{
-      font-size:12px;color:var(--sub); margin-top:8px;
-    }
+    .meta{font-size:var(--verse-meta-font);color:var(--sub);margin-bottom:6px}
+    .text{font-size:var(--verse-font);line-height:1.6;word-break:keep-all}
 
     /* modal */
     .modalOverlay{
@@ -111,7 +107,7 @@
       z-index:999;
     }
     .modal{
-      width:min(720px, 100%);
+      width:min(760px, 100%);
       background:rgba(15,23,42,.98);
       border:1px solid rgba(31,41,55,.9);
       border-radius:20px;
@@ -139,9 +135,6 @@
       border-radius:12px;
       background:transparent;
     }
-    .kv{display:grid;grid-template-columns: 140px 1fr; gap:8px 10px; font-size:13px}
-    .kv div{padding:8px 10px; border:1px solid rgba(31,41,55,.75); border-radius:12px; background:rgba(2,6,23,.35)}
-    .kv .k{color:var(--sub)}
     .resultBadge{
       display:inline-block;
       padding:6px 10px;
@@ -161,130 +154,123 @@
       margin-bottom:10px;
     }
     .answerLine:last-child{margin-bottom:0}
+    .kv{
+      display:grid;
+      grid-template-columns: 160px 1fr;
+      gap:10px;
+      align-items:center;
+    }
+    .kv .k{color:var(--sub);font-size:13px}
+    .hintBox{
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px dashed rgba(148,163,184,.25);
+      background:rgba(2,6,23,.35);
+      color:var(--sub);
+      font-size:13px;
+      line-height:1.55;
+    }
   </style>
 </head>
 
 <body>
-  <div class="wrap">
-    <h1>성경 구절 순서 맞추기 <span class="pill">5절</span></h1>
+<div class="wrap">
+  <h1>
+    Bible Verse Ordering Game
+    <span class="pill">requirement v01 (frozen)</span>
+    <span class="pill" id="nPill">N=5</span>
+  </h1>
 
-    <div class="grid">
-      <!-- LEFT: Main Controls -->
-      <div class="card">
-        <!-- 선택 섹션 -->
-        <div>
-          <div class="sectionTitle">선택 섹션 <span class="pill">권 → 장 → 절</span></div>
+  <!-- requirement v01: one-screen layout with three sections visible -->
+  <div class="grid">
+    <!-- LEFT: Selection + Command Buttons -->
+    <div class="card">
+      <div class="sectionTitle">Selection Section <span class="pill">권 → 장 → 절</span></div>
 
-          <label>권 (Book)</label>
-          <select id="bookSel"></select>
+      <label>권 (Book)</label>
+      <select id="bookSel"></select>
 
-          <label>장 (Chapter)</label>
-          <select id="chapSel"></select>
+      <label>장 (Chapter)</label>
+      <select id="chapSel"></select>
 
-          <label>절 (Verse) <span class="pill">선택한 절부터 연속 5절</span></label>
-          <select id="verseSel"></select>
-        </div>
+      <label>절 (Verse) <span class="pill">start</span></label>
+      <select id="verseSel"></select>
 
-        <div style="height:12px"></div>
+      <div style="height:14px"></div>
 
-        <!-- 명령 버튼 섹션 -->
-        <div>
-          <div class="sectionTitle">명령 버튼 섹션</div>
-          <div class="row">
-            <button class="primary" id="startBtn">게임 시작</button>
-            <button id="checkBtn" disabled>결과 확인</button>
-          </div>
-          <div class="row" style="margin-top:10px">
-            <button id="settingsBtn">게임 설정</button>
-            <button class="ghost" id="reshuffleBtn" disabled>다시하기(섞기)</button>
-          </div>
-          <div class="row" style="margin-top:10px">
-            <button class="ghost" id="answerBtn" disabled>정답 화면</button>
-            <button class="ghost" id="nextBtn" disabled>다음 5절</button>
-          </div>
-        </div>
-
-        <div style="height:12px"></div>
-
-        <!-- 명령 설명 섹션 -->
-        <div>
-          <div class="sectionTitle">명령 설명 섹션</div>
-          <div class="desc">
-            1) 권→장→절을 선택하고 <b>게임 시작</b>을 누르세요.<br/>
-            2) 섞인 5절을 <b>▲/▼ 버튼</b>으로 올바른 순서로 정렬합니다.<br/>
-            3) <b>결과 확인</b>을 누르면 성공/실패 팝업이 뜹니다.<br/>
-            4) <b>다시하기(섞기)</b>: 같은 5절을 다시 섞습니다.<br/>
-            5) <b>정답 화면</b>: 올바른 순서로 5절을 보여줍니다.<br/>
-            6) <b>다음 5절</b>: 다음 묶음(5절)로 이동합니다.
-          </div>
-          <div class="mini">※ 본문 텍스트는 <b>verse_krv.json</b>에서 로드합니다.</div>
-        </div>
+      <div class="sectionTitle">Command Button Section</div>
+      <div class="row">
+        <button class="primary" id="startBtn">게임 시작</button>
+        <button id="checkBtn" disabled>결과 확인</button>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button id="settingsBtn">게임 설정</button>
+        <button class="ghost" id="reshuffleBtn" disabled>다시하기(섞기)</button>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="ghost" id="answerBtn" disabled>정답 화면</button>
+        <button class="ghost" id="nextBtn" disabled>다음 N절</button>
       </div>
 
-      <!-- RIGHT: Game Execution -->
-      <div class="card">
-        <div class="sectionTitle">게임 실행 화면 섹션</div>
-        <p class="refLine" id="refTitle">선택 후 “게임 시작”을 눌러주세요.</p>
-        <div class="list" id="list"></div>
-        <div class="mini" id="gameHint">모바일에서는 ▲/▼로 순서를 이동하세요.</div>
+      <div class="hintBox">
+        • 모바일은 ▲/▼ 버튼으로 순서를 이동합니다.<br/>
+        • N은 게임 설정(5~10)에서 변경합니다.<br/>
+        • 장 끝이면 N보다 적어도 게임이 진행됩니다.
       </div>
     </div>
-  </div>
 
-  <!-- MODALS -->
-  <div class="modalOverlay" id="overlay">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <div class="modalHeader">
-        <h2 class="modalTitle" id="modalTitle">Popup</h2>
-        <button class="closeBtn" id="modalClose">닫기</button>
-      </div>
-      <div class="modalBody" id="modalBody"></div>
-      <div class="modalFooter" id="modalFooter"></div>
+    <!-- RIGHT: Game Execution -->
+    <div class="card">
+      <div class="sectionTitle">Game Execution Screen Section</div>
+      <p class="refLine" id="refTitle">선택 후 “게임 시작”을 눌러주세요.</p>
+      <div class="list" id="list"></div>
+      <div class="mini" id="gameHint">현재 N에 맞춰 폰트가 자동 조절됩니다.</div>
     </div>
   </div>
+</div>
+
+<!-- MODALS -->
+<div class="modalOverlay" id="overlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modalHeader">
+      <h2 class="modalTitle" id="modalTitle">Popup</h2>
+      <button class="closeBtn" id="modalClose">닫기</button>
+    </div>
+    <div class="modalBody" id="modalBody"></div>
+    <div class="modalFooter" id="modalFooter"></div>
+  </div>
+</div>
 
 <script>
-/* ========= Data ========= */
-/**
- * Supports BOTH formats:
- *
- * (A) Old format:
- * {
- *   "창세기": { "1": { "1":"text", "2":"text" } },
- *   "시편":   { "1": { "1":"text" } }
- * }
- *
- * (B) New format (your current):
- * {
- *   "version": "KRV",
- *   "book_id": 19,
- *   "book_name_kr": "시편",
- *   "chapters": { "1": { "1":"text" } }
- * }
- *
- * We normalize to:
- *   BIBLE = { [bookName]: chaptersObj }
- */
-const FALLBACK = {
-  "데이터없음": {
-    "1": { "1": "verse_krv.json을 로드하지 못했습니다. GitHub Pages 또는 로컬 서버로 실행하세요." }
-  }
+/* =========================================================
+   requirement v01 (frozen) Implementation
+   - Data: verse_krv.json (new structure)
+   - No Genesis/sample shown on success; no Genesis fallback leak
+   - Game Settings: only Consecutive Verse Count N (min=5, max=10, default=5)
+   - Consecutive verses from user-selected start verse; if end-of-chapter, allow fewer verses
+   - Ordering via ▲/▼
+   - Popups: settings/result/answer/notification
+   - One screen shows Selection + Command Buttons + Game Execution
+   - Dynamic font based on N
+   - Persist state (book/chap/verse(start)/N) in localStorage key bible_game_state_v01
+     Save times: start game / next N / save settings
+     Restore on load/refresh
+========================================================= */
+
+const STORAGE_KEY = "bible_game_state_v01";
+
+let RAW = null;      // raw json loaded
+let BIBLE = null;    // normalized: { [bookName]: chaptersObj }
+let settings = {
+  n: 5,              // default 5 (min 5, max 10)
 };
 
-let BIBLE = null;
+let sel = { book:null, chap:null, verse:null }; // current selection (start verse)
+let correctSet = []; // in correct order
+let shuffled = [];   // current shuffled order
 
-/* ========= State ========= */
-let sel = { book:null, chap:null, startVerse:null };
-let correctSet = [];
-let shuffled = [];
-let currentStart = null;
-
-const settings = {
-  verseCount: 5,          // fixed to 5
-  showVerseRef: true
-};
-
-/* ========= DOM ========= */
+/* ========== DOM ========== */
 const $ = (id)=>document.getElementById(id);
 
 const bookSel = $("bookSel");
@@ -300,6 +286,7 @@ const nextBtn = $("nextBtn");
 
 const refTitle = $("refTitle");
 const listEl = $("list");
+const nPill = $("nPill");
 
 const overlay = $("overlay");
 const modalTitle = $("modalTitle");
@@ -307,7 +294,7 @@ const modalBody = $("modalBody");
 const modalFooter = $("modalFooter");
 const modalClose = $("modalClose");
 
-/* ========= Modal Helpers ========= */
+/* ========== Modal Helpers ========== */
 function openModal(title, bodyHtml, footerButtons=[]) {
   modalTitle.textContent = title;
   modalBody.innerHTML = bodyHtml;
@@ -333,15 +320,6 @@ function mkButton(text, cls, onClick) {
   return b;
 }
 
-function openAlert(title, msg){
-  const body = `
-    <div class="resultBadge warn">알림</div>
-    <div class="desc">${escapeHtml(msg)}</div>
-  `;
-  const okBtn = mkButton("확인", "primary", closeModal);
-  openModal(title, body, [okBtn]);
-}
-
 function escapeHtml(s){
   return String(s)
     .replaceAll("&","&amp;")
@@ -351,107 +329,75 @@ function escapeHtml(s){
     .replaceAll("'","&#039;");
 }
 
-/* ========= Data Load + Normalize ========= */
-function normalizeBibleJson(json){
-  // New format: has chapters + book_name_kr
-  if (json && typeof json === "object" && json.chapters && (json.book_name_kr || json.book_name)) {
-    const bookName = json.book_name_kr || json.book_name;
-    // normalize to { [bookName]: chapters }
-    return { [bookName]: json.chapters };
-  }
+function openAlert(msg, title="알림 화면"){
+  const body = `
+    <div class="resultBadge warn">알림</div>
+    <div class="hintBox" style="margin:0">${escapeHtml(msg).replaceAll("\n","<br/>")}</div>
+  `;
+  const okBtn = mkButton("확인", "primary", closeModal);
+  openModal(title, body, [okBtn]);
+}
 
-  // Old format: object where each key is a book name and value is chapters object
-  // Heuristic: if any top-level value is an object and contains chapter keys like "1"
-  if (json && typeof json === "object" && !Array.isArray(json)) {
-    return json;
+/* ========== Data Load + Normalize ========== */
+/**
+ * Expected file: verse_krv.json
+ * New structure:
+ * { version, book_id, book_name_kr, chapters }
+ *
+ * Normalize to:
+ * { [book_name_kr]: chapters }
+ */
+function normalizeBibleJson(raw){
+  if (raw && typeof raw === "object" && raw.chapters && (raw.book_name_kr || raw.book_name)) {
+    const name = raw.book_name_kr || raw.book_name;
+    return { [name]: raw.chapters };
   }
-
-  return FALLBACK;
+  // Optional support: already normalized multi-book object
+  // (If you later merge multiple books)
+  if (raw && typeof raw === "object" && !Array.isArray(raw) && !raw.chapters) {
+    return raw;
+  }
+  return null;
 }
 
 async function loadData(){
-  // 1) file:// 실행이면 fetch가 거의 막힙니다.
   if (location.protocol === "file:") {
-    BIBLE = FALLBACK;
-    setTimeout(() => {
-      openAlert(
-        "알림 화면",
-        "현재 file:// 로 실행 중이라 JSON을 fetch로 읽을 수 없습니다.\n\n" +
-        "해결:\n" +
-        "1) GitHub Pages URL로 실행하거나\n" +
-        "2) 로컬 서버(VSCode Live Server)로 실행하세요."
-      );
-    }, 50);
-    return;
-  }
-
-  // 2) 후보 경로/파일명들을 순서대로 시도
-  const candidates = [
-    "./verse_krv.json",
-    "./verses_krv.json",
-    "/verse_krv.json",
-    "/verses_krv.json"
-  ];
-
-  let lastErr = null;
-
-  for (const path of candidates) {
-    try {
-      const res = await fetch(path, { cache: "no-store" });
-      if (!res.ok) throw new Error(`${path} -> HTTP ${res.status} ${res.statusText}`);
-
-      const raw = await res.json();
-      const normalized = normalizeBibleJson(raw);
-
-      if (!normalized || Object.keys(normalized).length === 0) {
-        throw new Error(`${path} -> loaded but normalized is empty`);
-      }
-
-      // ✅ 성공!
-      BIBLE = normalized;
-
-      // (선택) 성공 알림이 필요하면 아래 주석 해제
-      // setTimeout(() => openAlert("알림 화면", `JSON 로드 성공: ${path}`), 50);
-
-      return;
-    } catch (e) {
-      lastErr = e;
-      console.error("JSON load attempt failed:", e);
-    }
-  }
-
-  // 3) 전부 실패하면 fallback + 상세 알림
-  BIBLE = FALLBACK;
-  setTimeout(() => {
     openAlert(
-      "알림 화면",
-      "verse_krv.json 로드 실패.\n\n" +
-      "시도한 경로:\n" + candidates.join("\n") + "\n\n" +
-      "마지막 오류:\n" + String(lastErr || "unknown") + "\n\n" +
-      "체크:\n" +
-      "1) index.html과 verse_krv.json이 같은 위치(루트)인지\n" +
-      "2) GitHub Pages 설정이 main/root로 되어있는지\n" +
-      "3) 파일이 커밋/푸시 되었는지\n" +
-      "4) 브라우저 개발자도구(Network)에서 JSON 요청이 404인지 확인"
+      "현재 file:// 로 실행 중이라 verse_krv.json을 읽을 수 없습니다.\n\n" +
+      "GitHub Pages 또는 로컬 서버(VSCode Live Server)로 실행하세요."
     );
-  }, 50);
+    return false;
+  }
+
+  try{
+    const res = await fetch("./verse_krv.json", { cache:"no-store" });
+    if(!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    const text = await res.text();
+    RAW = JSON.parse(text);
+    BIBLE = normalizeBibleJson(RAW);
+    if(!BIBLE || Object.keys(BIBLE).length === 0) throw new Error("Normalized bible is empty.");
+    return true;
+  }catch(e){
+    console.error("Failed to load verse_krv.json:", e);
+    openAlert(
+      "verse_krv.json 로드 실패.\n\n" +
+      "체크:\n" +
+      "1) index.html과 verse_krv.json이 같은 폴더(루트)에 있는지\n" +
+      "2) GitHub Pages에서 /verse_krv.json 이 열리는지\n" +
+      "3) JSON 문법 오류가 없는지\n\n" +
+      `오류: ${String(e)}`
+    );
+    return false;
+  }
 }
 
-/* ========= Select Fill ========= */
-function getBooks(){ return Object.keys(BIBLE || {}); }
-function getChapters(book){
-  return Object.keys((BIBLE && BIBLE[book]) || {}).sort((a,b)=>Number(a)-Number(b));
-}
-function getVerses(book, chap){
-  const obj = (BIBLE && BIBLE[book] && BIBLE[book][chap]) ? BIBLE[book][chap] : {};
-  return Object.keys(obj).sort((a,b)=>Number(a)-Number(b));
-}
+/* ========== Select Fill ========== */
 function fillSelect(el, items, placeholder){
   el.innerHTML = "";
-  if(items.length === 0){
+  if(!items || items.length === 0){
     const opt = document.createElement("option");
     opt.value = "";
-    opt.textContent = placeholder || "데이터 없음";
+    opt.textContent = placeholder || "없음";
     el.appendChild(opt);
     return;
   }
@@ -462,48 +408,78 @@ function fillSelect(el, items, placeholder){
     el.appendChild(opt);
   }
 }
+
+function getBooks(){
+  return Object.keys(BIBLE || {});
+}
+function getChapters(book){
+  const ch = (BIBLE && BIBLE[book]) ? Object.keys(BIBLE[book]) : [];
+  return ch.sort((a,b)=>Number(a)-Number(b));
+}
+function getVerses(book, chap){
+  const obj = (BIBLE && BIBLE[book] && BIBLE[book][chap]) ? BIBLE[book][chap] : {};
+  const vs = Object.keys(obj);
+  return vs.sort((a,b)=>Number(a)-Number(b));
+}
+
 function initSelectors(){
   const books = getBooks();
   fillSelect(bookSel, books, "권 없음");
-  sel.book = books[0] || null;
-
-  updateChapters();
 
   bookSel.onchange = ()=>{ sel.book = bookSel.value; updateChapters(); };
   chapSel.onchange = ()=>{ sel.chap = chapSel.value; updateVerses(); };
-  verseSel.onchange = ()=>{ sel.startVerse = verseSel.value; };
+  verseSel.onchange = ()=>{ sel.verse = verseSel.value; };
+
+  // default initial
+  sel.book = bookSel.value;
+  updateChapters();
 }
+
 function updateChapters(){
   const chaps = getChapters(bookSel.value);
   fillSelect(chapSel, chaps, "장 없음");
-  sel.chap = chaps[0] || null;
+  sel.chap = chapSel.value;
   updateVerses();
 }
 function updateVerses(){
   const verses = getVerses(bookSel.value, chapSel.value);
   fillSelect(verseSel, verses, "절 없음");
-  sel.startVerse = verses[0] || null;
+  sel.verse = verseSel.value;
 }
 
-/* ========= Game Logic ========= */
-function getNVerseSet(book, chap, startV, n=5){
+/* ========== Dynamic Font by N ========== */
+function applyDynamicFontByN(n){
+  // requirement v01: change font so all can be displayed (policy-based, not exact px mandated)
+  // Simple linear scale: N=5 -> 15px, N=10 -> 12px
+  const clamped = Math.max(5, Math.min(10, Number(n)));
+  const font = 15 - (clamped - 5) * (3/5); // 15 -> 12
+  const meta = 12 - (clamped - 5) * (1/5); // 12 -> 11
+  document.documentElement.style.setProperty("--verse-font", `${font.toFixed(2)}px`);
+  document.documentElement.style.setProperty("--verse-meta-font", `${meta.toFixed(2)}px`);
+  nPill.textContent = `N=${clamped}`;
+}
+
+/* ========== Game Build (end-of-chapter allowed) ========== */
+function buildConsecutiveSet(book, chap, startVerse, n){
   const verses = getVerses(book, chap).map(v=>Number(v));
-  const s = Number(startV);
-  const idx = verses.indexOf(s);
-  if(idx < 0) return null;
+  const start = Number(startVerse);
 
-  const slice = verses.slice(idx, idx+n);
-  if(slice.length < n) return null;
+  const startIdx = verses.indexOf(start);
+  if(startIdx < 0) return null;
 
-  const obj = BIBLE[book][chap];
+  const slice = verses.slice(startIdx, startIdx + n); // can be shorter at end
+  if(slice.length === 0) return null;
+
+  const chapterObj = BIBLE[book][chap];
   return slice.map((v,i)=>({
     id: `${book}|${chap}|${v}`,
     book, chap, verse: String(v),
-    ref: `${book} ${chap}:${v}`,
-    text: obj[String(v)] ?? "",
+    ref: `${book} ${chap}:${v}`,         // internal; we don't show ref option in v01
+    text: (chapterObj[String(v)] ?? "").trim(),
     orderIndex: i
   }));
 }
+
 function shuffleArray(arr){
   const a = arr.slice();
   for(let i=a.length-1;i>0;i--){
@@ -512,6 +488,7 @@ function shuffleArray(arr){
   }
   return a;
 }
+
 function enableGameButtons(enabled){
   checkBtn.disabled = !enabled;
   reshuffleBtn.disabled = !enabled;
@@ -519,42 +496,13 @@ function enableGameButtons(enabled){
   nextBtn.disabled = !enabled;
 }
 
-function startGame(){
-  sel.book = bookSel.value;
-  sel.chap = chapSel.value;
-  sel.startVerse = verseSel.value;
-
-  const set = getNVerseSet(sel.book, sel.chap, sel.startVerse, settings.verseCount);
-  if(!set){
-    openAlert("알림 화면", "선택한 절부터 연속 5절이 존재해야 합니다. (장 끝 부분이면 다른 절을 선택하세요)");
-    return;
-  }
-
-  correctSet = set;
-  shuffled = shuffleArray(set);
-  currentStart = Number(sel.startVerse);
-
-  refTitle.textContent = `${sel.book} ${sel.chap}:${sel.startVerse} ~ ${sel.book} ${sel.chap}:${Number(sel.startVerse)+settings.verseCount-1}`;
-  renderList(shuffled);
-
-  enableGameButtons(true);
-}
-
-function moveItem(id, dir){
-  const i = shuffled.findIndex(x=>x.id===id);
-  const j = i + dir;
-  if(i < 0 || j < 0 || j >= shuffled.length) return;
-  [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  renderList(shuffled);
-}
-
 function renderList(items){
   listEl.innerHTML = "";
+
   for(const it of items){
     const row = document.createElement("div");
     row.className = "item";
 
-    // ▲▼ controls
     const ctrl = document.createElement("div");
     ctrl.className = "ctrl";
 
@@ -571,20 +519,14 @@ function renderList(items){
     ctrl.appendChild(up);
     ctrl.appendChild(down);
 
-    // content
     const content = document.createElement("div");
     content.style.flex = "1 1 auto";
 
-    const meta = document.createElement("div");
-    meta.className = "meta";
-    meta.textContent = settings.showVerseRef ? it.ref : "";
-    if(!settings.showVerseRef) meta.style.display = "none";
-
+    // v01: Verse Reference Display setting deleted => show text only (no meta)
     const text = document.createElement("div");
     text.className = "text";
     text.textContent = it.text || "(본문 텍스트 없음)";
 
-    content.appendChild(meta);
     content.appendChild(text);
 
     row.appendChild(ctrl);
@@ -593,45 +535,117 @@ function renderList(items){
   }
 }
 
+function moveItem(id, dir){
+  const i = shuffled.findIndex(x=>x.id===id);
+  const j = i + dir;
+  if(i < 0 || j < 0 || j >= shuffled.length) return;
+  [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  renderList(shuffled);
+}
+
 function isCorrectOrder(){
   if(shuffled.length !== correctSet.length) return false;
   return shuffled.every((it, idx)=> it.id === correctSet[idx].id);
 }
 
-/* ========= Popups ========= */
+/* ========== State Save/Restore (v01 frozen) ========== */
+function savePlayState(){
+  try{
+    const payload = {
+      book: sel.book,
+      chap: sel.chap,
+      verse: sel.verse,     // start verse
+      n: settings.n
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  }catch(e){
+    console.warn("Failed to save state:", e);
+  }
+}
+
+function loadPlayState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return null;
+    const obj = JSON.parse(raw);
+    if(!obj || !obj.book || !obj.chap || !obj.verse) return null;
+    return obj;
+  }catch(e){
+    console.warn("Failed to load state:", e);
+    return null;
+  }
+}
+
+function applyStateToSelectors(state){
+  // verify existence
+  if(!BIBLE) return false;
+  if(!(state.book in BIBLE)) return false;
+  if(!(state.chap in BIBLE[state.book])) return false;
+  if(!(state.verse in BIBLE[state.book][state.chap])) return false;
+
+  bookSel.value = state.book;
+  sel.book = state.book;
+
+  updateChapters();
+  chapSel.value = state.chap;
+  sel.chap = state.chap;
+
+  updateVerses();
+  verseSel.value = state.verse;
+  sel.verse = state.verse;
+
+  // N
+  const n = Number(state.n);
+  if(Number.isFinite(n)){
+    settings.n = Math.max(5, Math.min(10, n));
+  }
+  applyDynamicFontByN(settings.n);
+  return true;
+}
+
+/* ========== Popups (Settings / Result / Answer / Notification) ========== */
 function openSettings(){
   const body = `
+    <div class="resultBadge warn">게임 설정</div>
     <div class="kv">
-      <div class="k">구절 개수</div><div>5 (고정)</div>
-      <div class="k">참조 표시</div>
+      <div class="k">연속 구절 수 (N)</div>
       <div>
-        <label style="margin:0; display:flex; gap:8px; align-items:center; color:var(--text)">
-          <input type="checkbox" id="showRefChk" ${settings.showVerseRef ? "checked":""}/>
-          구절 참조(권 장:절) 표시
-        </label>
+        <select id="nSel">
+          ${[5,6,7,8,9,10].map(v=>`<option value="${v}" ${v===settings.n?"selected":""}>${v}</option>`).join("")}
+        </select>
       </div>
     </div>
-    <div style="height:10px"></div>
-    <div class="desc">
-      설정은 즉시 적용됩니다.
+    <div class="hintBox">
+      • 최소 5, 최대 10<br/>
+      • 장 끝이면 N보다 적어도 게임 진행 허용
     </div>
   `;
 
+  const cancelBtn = mkButton("취소", "", closeModal);
   const saveBtn = mkButton("저장", "primary", ()=>{
-    const chk = document.getElementById("showRefChk");
-    settings.showVerseRef = !!chk?.checked;
-    if(shuffled.length) renderList(shuffled);
+    const nSel = document.getElementById("nSel");
+    const n = Number(nSel?.value ?? 5);
+    settings.n = Math.max(5, Math.min(10, n));
+    applyDynamicFontByN(settings.n);
+
+    // requirement v01: save time = when saving settings
+    savePlayState();
+
     closeModal();
-    openAlert("알림 화면", "설정이 저장되었습니다.");
+    openAlert("설정이 저장되었습니다.");
+
+    // If already in a game, restart with new N at same start verse (allowed to be shorter at end)
+    if(correctSet.length > 0){
+      startGame({silent:true});
+    }
   });
 
-  const cancelBtn = mkButton("취소", "", closeModal);
   openModal("게임 설정", body, [cancelBtn, saveBtn]);
 }
 
 function openResult(){
   if(!correctSet.length){
-    openAlert("알림 화면", "먼저 게임을 시작하세요.");
+    openAlert("먼저 게임을 시작하세요.");
     return;
   }
   const ok = isCorrectOrder();
@@ -641,24 +655,26 @@ function openResult(){
 
   const body = `
     ${badge}
-    <div class="desc">
+    <div class="hintBox" style="margin:0">
       ${ok ? "정답 순서입니다!" : "순서가 맞지 않습니다. ▲/▼로 다시 정렬해 보세요."}
     </div>
   `;
 
   const closeBtn = mkButton("닫기", "", closeModal);
-  const answerBtn2 = mkButton("정답 보기", "primary", ()=>{
+  const ansBtn = mkButton("정답 보기", "primary", ()=>{
     closeModal();
     openAnswer();
   });
-  openModal("게임 결과", body, [closeBtn, answerBtn2]);
+
+  openModal("게임 결과", body, [closeBtn, ansBtn]);
 }
 
 function openAnswer(){
   if(!correctSet.length){
-    openAlert("알림 화면", "먼저 게임을 시작하세요.");
+    openAlert("먼저 게임을 시작하세요.");
     return;
   }
+
   const lines = correctSet.map(v=>`
     <div class="answerLine">
       <div class="meta">${escapeHtml(v.ref)}</div>
@@ -667,51 +683,111 @@ function openAnswer(){
   `).join("");
 
   const body = `
-    <div class="desc">아래는 올바른 순서(정답)입니다.</div>
+    <div class="resultBadge warn">정답 화면</div>
+    <div class="hintBox" style="margin-top:0">아래는 올바른 순서(정답)입니다.</div>
     <div style="height:10px"></div>
     ${lines}
   `;
 
-  const closeBtn = mkButton("닫기", "", closeModal);
+  const closeBtn = mkButton("닫기", "primary", closeModal);
   openModal("정답 화면", body, [closeBtn]);
 }
 
-/* ========= Buttons ========= */
-startBtn.addEventListener("click", startGame);
-checkBtn.addEventListener("click", openResult);
-settingsBtn.addEventListener("click", openSettings);
+/* ========== Game Actions ========== */
+function startGame({silent=false}={}){
+  sel.book = bookSel.value;
+  sel.chap = chapSel.value;
+  sel.verse = verseSel.value;
 
-reshuffleBtn.addEventListener("click", ()=>{
-  if(!correctSet.length){ openAlert("알림 화면","먼저 게임을 시작하세요."); return; }
+  const set = buildConsecutiveSet(sel.book, sel.chap, sel.verse, settings.n);
+  if(!set){
+    enableGameButtons(false);
+    refTitle.textContent = "선택 후 “게임 시작”을 눌러주세요.";
+    listEl.innerHTML = "";
+    openAlert("선택한 절을 찾을 수 없습니다. (데이터를 확인하세요)");
+    return;
+  }
+
+  correctSet = set;
+  shuffled = shuffleArray(set);
+
+  // range label: show start~end based on actual length
+  const start = Number(sel.verse);
+  const endVerse = Number(set[set.length-1].verse);
+  refTitle.textContent = `${sel.book} ${sel.chap}:${start} ~ ${sel.book} ${sel.chap}:${endVerse}  (총 ${set.length}절, 설정 N=${settings.n})`;
+
+  renderList(shuffled);
+  enableGameButtons(true);
+
+  // requirement v01: save time = when starting the game
+  savePlayState();
+
+  if(!silent){
+    // no extra popup on start to keep flow clean
+  }
+}
+
+function reshuffle(){
+  if(!correctSet.length){
+    openAlert("먼저 게임을 시작하세요.");
+    return;
+  }
   shuffled = shuffleArray(correctSet);
   renderList(shuffled);
-  openAlert("알림 화면", "다시 섞었습니다.");
-});
+  openAlert("다시 섞었습니다.");
+}
 
-answerBtn.addEventListener("click", openAnswer);
-
-nextBtn.addEventListener("click", ()=>{
+function nextSection(){
   if(!correctSet.length){
-    openAlert("알림 화면","먼저 게임을 시작하세요.");
+    openAlert("먼저 게임을 시작하세요.");
     return;
   }
-  const nextStart = (currentStart ?? Number(sel.startVerse)) + settings.verseCount;
+
+  // Move by N (settings.n) from current start verse
+  const currentStart = Number(sel.verse);
+  const nextStart = currentStart + settings.n;
+
   const verses = getVerses(sel.book, sel.chap).map(v=>Number(v));
   if(!verses.includes(nextStart)){
-    openAlert("알림 화면","다음 5절이 없습니다. (장 끝) 다른 절 또는 다른 장/권을 선택하세요.");
+    openAlert("다음 N절이 없습니다. (장 끝)\n다른 절/장을 선택하세요.");
     return;
   }
-  currentStart = nextStart;
-  verseSel.value = String(nextStart);
-  sel.startVerse = String(nextStart);
-  startGame();
-});
 
-/* ========= Boot ========= */
-(async function(){
-  await loadData();
+  // update selector & start game
+  verseSel.value = String(nextStart);
+  sel.verse = String(nextStart);
+
+  // requirement v01: save time = when moving to the next N section (we save after change)
+  startGame({silent:true});
+  savePlayState();
+}
+
+/* ========== Wire Buttons ========== */
+startBtn.addEventListener("click", ()=> startGame());
+checkBtn.addEventListener("click", openResult);
+settingsBtn.addEventListener("click", openSettings);
+reshuffleBtn.addEventListener("click", reshuffle);
+answerBtn.addEventListener("click", openAnswer);
+nextBtn.addEventListener("click", nextSection);
+
+/* ========== Boot ========== */
+(async function boot(){
+  applyDynamicFontByN(settings.n);
+
+  const ok = await loadData();
+  if(!ok) return;
+
   initSelectors();
-  enableGameButtons(false);
+
+  // Restore state (book/chap/verse(start)/N)
+  const state = loadPlayState();
+  if(state){
+    const applied = applyStateToSelectors(state);
+    if(applied){
+      // Auto-start game so user can continue (restore requirement)
+      startGame({silent:true});
+    }
+  }
 })();
 </script>
 </body>
