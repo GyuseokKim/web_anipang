@@ -266,8 +266,11 @@
  *   BIBLE = { [bookName]: chaptersObj }
  */
 const FALLBACK = {
-  "창세기": { "1": { "1":"샘플 1", "2":"샘플 2", "3":"샘플 3", "4":"샘플 4", "5":"샘플 5", "6":"샘플 6", "7":"샘플 7", "8":"샘플 8", "9":"샘플 9", "10":"샘플 10" } }
+  "데이터없음": {
+    "1": { "1": "verse_krv.json을 로드하지 못했습니다. GitHub Pages 또는 로컬 서버로 실행하세요." }
+  }
 };
+
 let BIBLE = null;
 
 /* ========= State ========= */
@@ -367,16 +370,55 @@ function normalizeBibleJson(json){
 }
 
 async function loadData(){
+  // file:// 로 열면 fetch가 막히는 경우가 많음
+  if (location.protocol === "file:") {
+    BIBLE = FALLBACK;
+    // 여기서 바로 팝업 띄우기 위해, 부팅 후 initSelectors 전에 호출될 수 있으니
+    // 약간 지연시켜 UI 준비 후 알림 표시
+    setTimeout(() => {
+      openAlert(
+        "알림 화면",
+        "현재 file:// 로 실행 중이라 verse_krv.json을 fetch로 읽을 수 없습니다.\n\n" +
+        "해결: GitHub Pages로 실행하거나, 로컬 서버(예: VSCode Live Server)로 실행하세요.\n\n" +
+        "또는 index.html과 verse_krv.json을 같은 폴더(루트)에 두었는지 확인하세요."
+      );
+    }, 50);
+    return;
+  }
+
   try{
-    // IMPORTANT: new file name is verse_krv.json
-    const res = await fetch("./verse_krv.json", {cache:"no-store"});
-    if(!res.ok) throw new Error("no json");
+    // ✅ 반드시 이 파일명을 사용합니다
+    const res = await fetch("./verse_krv.json", { cache:"no-store" });
+
+    if(!res.ok){
+      throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    }
+
     const raw = await res.json();
     BIBLE = normalizeBibleJson(raw);
+
+    // ✅ 로딩 성공했는데도 book이 비어있으면 구조 문제
+    if (!BIBLE || Object.keys(BIBLE).length === 0) {
+      throw new Error("JSON loaded but normalized result is empty.");
+    }
   }catch(e){
+    console.error("Failed to load verse_krv.json:", e);
     BIBLE = FALLBACK;
+    setTimeout(() => {
+      openAlert(
+        "알림 화면",
+        "verse_krv.json을 로드하지 못했습니다.\n\n" +
+        "체크:\n" +
+        "1) index.html과 verse_krv.json이 같은 폴더(루트)에 있는지\n" +
+        "2) 파일명이 정확히 'verse_krv.json'인지\n" +
+        "3) GitHub Pages 주소에서 직접 열고 있는지(파일 더블클릭 X)\n" +
+        "4) JSON 문법 오류가 없는지\n\n" +
+        "개발자콘솔(F12)에서 오류 로그도 확인하세요."
+      );
+    }, 50);
   }
 }
+
 
 /* ========= Select Fill ========= */
 function getBooks(){ return Object.keys(BIBLE || {}); }
