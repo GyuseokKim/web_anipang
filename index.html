@@ -12,7 +12,6 @@
       --shadow: 0 14px 40px rgba(0,0,0,.35);
       --r: 18px;
 
-      /* dynamic verse font size (requirement v03) */
       --verse-font: 14px;
       --verse-meta-font: 12px;
     }
@@ -34,7 +33,6 @@
       color:var(--sub);
     }
 
-    /* screens */
     .screen{display:none}
     .screen.active{display:block}
 
@@ -74,20 +72,8 @@
     .row{display:flex;gap:10px;flex-wrap:wrap}
     .row > button{flex:1 1 140px}
 
-    .hintBox{
-      margin-top:10px;
-      padding:10px 12px;
-      border-radius:14px;
-      border:1px dashed rgba(148,163,184,.25);
-      background:rgba(2,6,23,.35);
-      color:var(--sub);
-      font-size:13px;
-      line-height:1.55;
-    }
-
     /* Game screen */
     .refLine{font-size:14px;color:#e0f2fe;margin:0 0 10px}
-    .mini{font-size:12px;color:var(--sub);margin-top:8px}
     .list{display:flex;flex-direction:column;gap:10px;margin-top:8px}
 
     .item{
@@ -110,7 +96,7 @@
     }
     .text{font-size:var(--verse-font);line-height:1.6;word-break:keep-all}
 
-    /* Bottom bar fixed (requirement v03) */
+    /* Bottom bar fixed */
     .bottomBar{
       position:fixed;
       left:0; right:0; bottom:0;
@@ -127,7 +113,7 @@
       gap:10px;
       align-items:center;
       justify-content:space-between;
-      flex-wrap:wrap; /* mobile wrap allowed */
+      flex-wrap:wrap;
     }
     .barInner button{
       width:auto;
@@ -137,13 +123,11 @@
       font-size:13px;
       border-radius:14px;
     }
-
-    /* add padding so list isn't hidden under bottom bar */
     .padBottom{
       padding-bottom:92px;
     }
 
-    /* Modal (Popups: Settings/Result/Answer/Notification) */
+    /* Modal */
     .modalOverlay{
       position:fixed; inset:0;
       background:rgba(0,0,0,.55);
@@ -210,15 +194,15 @@
 <div class="wrap">
   <h1>
     Bible Verse Ordering Game
-    <span class="pill">requirement v03 (frozen)</span>
+    <span class="pill">requirement v03</span>
     <span class="pill" id="nPill">N=5</span>
   </h1>
 
-  <!-- Screen 1: Selection + Command Buttons -->
+  <!-- Screen 1 -->
   <section id="screen1" class="screen active">
     <div class="grid">
       <div class="card">
-        <div class="sectionTitle">Selection Section <span class="pill">권 → 장 → 절</span></div>
+        <div class="sectionTitle">Selection</div>
 
         <label>권 (Book)</label>
         <select id="bookSel"></select>
@@ -226,56 +210,42 @@
         <label>장 (Chapter)</label>
         <select id="chapSel"></select>
 
-        <label>절 (Verse) <span class="pill">start</span></label>
+        <label>절 (Verse)</label>
         <select id="verseSel"></select>
 
         <div style="height:14px"></div>
 
-        <div class="sectionTitle">Command Button Section</div>
+        <div class="sectionTitle">Command</div>
         <div class="row">
           <button class="primary" id="startBtn">게임 시작</button>
           <button id="settingsBtn">게임 설정</button>
         </div>
-
-        <div class="hintBox">
-          • v03: 화면은 2개로 분리됩니다.<br/>
-          • “게임 시작”을 누르면 게임 화면(Screen 2)로 이동합니다.<br/>
-          • N은 5~10 (기본 5) 입니다.<br/>
-          • 상태 저장 키: <b>bible_game_state_v01</b> (권/장/절(start)/N 저장)
-        </div>
       </div>
 
+      <!-- (설명/Status 화면 제거됨) -->
       <div class="card">
-        <div class="sectionTitle">Status</div>
-        <div class="hintBox" style="margin-top:0">
-          <div><b>현재 선택</b>: <span id="statusSel">-</span></div>
-          <div><b>설정</b>: 연속 구절 수 N = <span id="statusN">5</span></div>
-          <div style="margin-top:8px; color:var(--sub)">
-            Screen 2 하단 버튼: 결과 확인 / 다시하기 / 정답 확인 / 다음 이동
-          </div>
-        </div>
+        <div class="sectionTitle"> </div>
       </div>
     </div>
   </section>
 
-  <!-- Screen 2: Game Execution -->
+  <!-- Screen 2 -->
   <section id="screen2" class="screen">
     <div class="card padBottom">
-      <div class="sectionTitle">Game Execution Screen Section</div>
-      <p class="refLine" id="refTitle">게임을 시작하면 구절이 표시됩니다.</p>
+      <div class="sectionTitle">Game</div>
+      <p class="refLine" id="refTitle"></p>
       <div class="list" id="list"></div>
-      <div class="mini" id="gameHint">모바일: ▲/▼ 버튼으로 순서 이동</div>
     </div>
   </section>
 </div>
 
-<!-- Bottom bar (only on Screen 2) -->
+<!-- Bottom bar (Screen 2 only) -->
 <div class="bottomBar" id="bottomBar" style="display:none">
   <div class="barInner">
     <button id="checkBtn">결과 확인</button>
-    <button class="ghost" id="reshuffleBtn">다시하기(섞기)</button>
+    <button class="ghost" id="reshuffleBtn">다시하기</button>
     <button class="ghost" id="answerBtn">정답 확인</button>
-    <button class="primary" id="nextBtn">다음 이동(Next N절)</button>
+    <button class="primary" id="nextBtn">다음 이동</button>
   </div>
 </div>
 
@@ -292,23 +262,6 @@
 </div>
 
 <script>
-/* =========================================================
-   requirement v03 Implementation
-   - Two screens:
-     Screen 1: Selection + Required buttons (Start, Settings)
-     Screen 2: Game Execution list
-   - Start button navigates to Screen 2 automatically
-   - Bottom fixed bar on Screen 2: Check / Replay / Answer / Next Move
-   - Data: verse_krv.json
-   - N: min 5, max 10, default 5
-   - End-of-chapter => allow fewer verses
-   - Ordering: ▲/▼ buttons
-   - Popups: Settings/Result/Answer/Notification
-   - Persist state in localStorage key bible_game_state_v01: book/chap/verse(start)/N
-     Save times: start game / next move / save settings
-     Restore on load/refresh
-========================================================= */
-
 const STORAGE_KEY = "bible_game_state_v01";
 
 let RAW = null;
@@ -343,8 +296,6 @@ const refTitle = $("refTitle");
 const listEl = $("list");
 
 const nPill = $("nPill");
-const statusSel = $("statusSel");
-const statusN = $("statusN");
 
 /* Modal */
 const overlay = $("overlay");
@@ -385,10 +336,10 @@ function escapeHtml(s){
     .replaceAll('"',"&quot;")
     .replaceAll("'","&#039;");
 }
-function openAlert(msg, title="알림 화면"){
+function openAlert(msg, title="알림"){
   const body = `
     <div class="resultBadge warn">알림</div>
-    <div class="hintBox" style="margin:0">${escapeHtml(msg).replaceAll("\n","<br/>")}</div>
+    <div style="color:var(--sub);line-height:1.6">${escapeHtml(msg).replaceAll("\n","<br/>")}</div>
   `;
   const okBtn = mkButton("확인", "primary", closeModal);
   openModal(title, body, [okBtn]);
@@ -423,10 +374,7 @@ function normalizeBibleJson(raw){
 
 async function loadData(){
   if (location.protocol === "file:") {
-    openAlert(
-      "현재 file:// 로 실행 중이라 verse_krv.json을 읽을 수 없습니다.\n\n" +
-      "GitHub Pages 또는 로컬 서버(VSCode Live Server)로 실행하세요."
-    );
+    openAlert("file:// 로는 verse_krv.json을 읽을 수 없습니다.\nGitHub Pages 또는 로컬 서버로 실행하세요.");
     return false;
   }
 
@@ -441,10 +389,9 @@ async function loadData(){
   }catch(e){
     console.error("Failed to load verse_krv.json:", e);
     openAlert(
-      "verse_krv.json 로드 실패.\n\n" +
-      "체크:\n" +
-      "1) index.html과 verse_krv.json이 같은 폴더(루트)에 있는지\n" +
-      "2) GitHub Pages에서 /verse_krv.json 이 열리는지\n" +
+      "verse_krv.json 로드 실패\n\n" +
+      "1) index.html과 같은 폴더인지\n" +
+      "2) /verse_krv.json이 열리는지\n" +
       "3) JSON 문법 오류가 없는지\n\n" +
       `오류: ${String(e)}`
     );
@@ -484,13 +431,12 @@ function getVerses(book, chap){
 function initSelectors(){
   fillSelect(bookSel, getBooks(), "권 없음");
 
-  bookSel.onchange = ()=>{ sel.book = bookSel.value; updateChapters(); updateStatus(); };
-  chapSel.onchange = ()=>{ sel.chap = chapSel.value; updateVerses(); updateStatus(); };
-  verseSel.onchange = ()=>{ sel.verse = verseSel.value; updateStatus(); };
+  bookSel.onchange = ()=>{ sel.book = bookSel.value; updateChapters(); };
+  chapSel.onchange = ()=>{ sel.chap = chapSel.value; updateVerses(); };
+  verseSel.onchange = ()=>{ sel.verse = verseSel.value; };
 
   sel.book = bookSel.value;
   updateChapters();
-  updateStatus();
 }
 function updateChapters(){
   fillSelect(chapSel, getChapters(bookSel.value), "장 없음");
@@ -505,24 +451,22 @@ function updateVerses(){
 /* ===== Dynamic Font by N ===== */
 function applyDynamicFontByN(n){
   const clamped = Math.max(5, Math.min(10, Number(n)));
-  // N=5 -> 15px, N=10 -> 12px
-  const font = 15 - (clamped - 5) * (3/5);
+  const font = 15 - (clamped - 5) * (3/5);  // 15 -> 12
   const meta = 12 - (clamped - 5) * (1/5);
   document.documentElement.style.setProperty("--verse-font", `${font.toFixed(2)}px`);
   document.documentElement.style.setProperty("--verse-meta-font", `${meta.toFixed(2)}px`);
   settings.n = clamped;
   nPill.textContent = `N=${clamped}`;
-  statusN.textContent = String(clamped);
 }
 
-/* ===== Game Build (end-of-chapter allowed) ===== */
+/* ===== Game Build ===== */
 function buildConsecutiveSet(book, chap, startVerse, n){
   const verses = getVerses(book, chap).map(v=>Number(v));
   const start = Number(startVerse);
   const startIdx = verses.indexOf(start);
   if(startIdx < 0) return null;
 
-  const slice = verses.slice(startIdx, startIdx + n); // can be shorter at end
+  const slice = verses.slice(startIdx, startIdx + n); // end-of-chapter allowed
   if(slice.length === 0) return null;
 
   const chapterObj = BIBLE[book][chap];
@@ -571,12 +515,11 @@ function renderList(items){
 
     const text = document.createElement("div");
     text.className = "text";
-    text.textContent = it.text || "(본문 텍스트 없음)";
+    text.textContent = it.text || "";
     content.appendChild(text);
 
     row.appendChild(ctrl);
     row.appendChild(content);
-
     listEl.appendChild(row);
   }
 }
@@ -594,7 +537,7 @@ function isCorrectOrder(){
   return shuffled.every((it, idx)=> it.id === correctSet[idx].id);
 }
 
-/* ===== Persistence (requirement v03 keeps v01 key rules) ===== */
+/* ===== Persistence ===== */
 function savePlayState(){
   try{
     const payload = { book: sel.book, chap: sel.chap, verse: sel.verse, n: settings.n };
@@ -620,7 +563,6 @@ function applyStateToSelectors(state){
   if(!(state.chap in BIBLE[state.book])) return false;
   if(!(state.verse in BIBLE[state.book][state.chap])) return false;
 
-  // N
   const n = Number(state.n);
   if(Number.isFinite(n)) applyDynamicFontByN(n);
 
@@ -635,17 +577,10 @@ function applyStateToSelectors(state){
   verseSel.value = state.verse;
   sel.verse = state.verse;
 
-  updateStatus();
   return true;
 }
 
-/* ===== Status ===== */
-function updateStatus(){
-  statusSel.textContent = (sel.book && sel.chap && sel.verse) ? `${sel.book} ${sel.chap}:${sel.verse}` : "-";
-  statusN.textContent = String(settings.n);
-}
-
-/* ===== Popups: Settings / Result / Answer ===== */
+/* ===== Popups ===== */
 function openSettings(){
   const body = `
     <div class="resultBadge warn">게임 설정</div>
@@ -656,10 +591,6 @@ function openSettings(){
           ${[5,6,7,8,9,10].map(v=>`<option value="${v}" ${v===settings.n?"selected":""}>${v}</option>`).join("")}
         </select>
       </div>
-    </div>
-    <div class="hintBox">
-      • 최소 5, 최대 10<br/>
-      • 장 끝이면 N보다 적어도 게임 진행 허용
     </div>
   `;
 
@@ -673,52 +604,37 @@ function openSettings(){
     savePlayState();
 
     closeModal();
-    openAlert("설정이 저장되었습니다.");
   });
 
   openModal("게임 설정", body, [cancelBtn, saveBtn]);
 }
 
 function openResult(){
-  if(!correctSet.length){
-    openAlert("먼저 게임을 시작하세요.");
-    return;
-  }
+  if(!correctSet.length) return;
+
   const ok = isCorrectOrder();
   const badge = ok
-    ? `<div class="resultBadge success">성공 (PASS) ✅</div>`
-    : `<div class="resultBadge fail">실패 (FAIL) ❌</div>`;
+    ? `<div class="resultBadge success">PASS</div>`
+    : `<div class="resultBadge fail">FAIL</div>`;
 
-  const body = `
-    ${badge}
-    <div class="hintBox" style="margin:0">
-      ${ok ? "정답 순서입니다!" : "순서가 맞지 않습니다. ▲/▼로 다시 정렬해 보세요."}
-    </div>
-  `;
+  const body = `${badge}`;
   const closeBtn = mkButton("닫기", "primary", closeModal);
   openModal("게임 결과", body, [closeBtn]);
 }
 
 function openAnswer(){
-  if(!correctSet.length){
-    openAlert("먼저 게임을 시작하세요.");
-    return;
-  }
+  if(!correctSet.length) return;
+
   const lines = correctSet.map(v=>`
     <div class="answerLine">
       <div class="meta">${escapeHtml(v.ref)}</div>
-      <div class="text">${escapeHtml(v.text || "(본문 텍스트 없음)")}</div>
+      <div class="text">${escapeHtml(v.text || "")}</div>
     </div>
   `).join("");
 
-  const body = `
-    <div class="resultBadge warn">정답 화면</div>
-    <div class="hintBox" style="margin-top:0">아래는 올바른 순서(정답)입니다.</div>
-    <div style="height:10px"></div>
-    ${lines}
-  `;
+  const body = `${lines}`;
   const closeBtn = mkButton("닫기", "primary", closeModal);
-  openModal("정답 확인", body, [closeBtn]);
+  openModal("정답", body, [closeBtn]);
 }
 
 /* ===== Game Actions ===== */
@@ -728,69 +644,54 @@ function startGame(){
   sel.verse = verseSel.value;
 
   const set = buildConsecutiveSet(sel.book, sel.chap, sel.verse, settings.n);
-  if(!set){
-    openAlert("선택한 절을 찾을 수 없습니다. (데이터를 확인하세요)");
-    return;
-  }
+  if(!set) return;
+
   correctSet = set;
   shuffled = shuffleArray(set);
 
   const start = Number(sel.verse);
   const endVerse = Number(set[set.length-1].verse);
-  refTitle.textContent = `${sel.book} ${sel.chap}:${start} ~ ${sel.book} ${sel.chap}:${endVerse} (총 ${set.length}절, 설정 N=${settings.n})`;
+  refTitle.textContent = `${sel.book} ${sel.chap}:${start} ~ ${sel.book} ${sel.chap}:${endVerse}`;
 
   renderList(shuffled);
 
   // save time: when starting the game
   savePlayState();
 
-  // requirement v03: move to Screen 2 automatically
   goScreen(2);
 }
 
 function reshuffle(){
-  if(!correctSet.length){
-    openAlert("먼저 게임을 시작하세요.");
-    return;
-  }
+  if(!correctSet.length) return;
   shuffled = shuffleArray(correctSet);
   renderList(shuffled);
 }
 
 function nextMove(){
-  if(!correctSet.length){
-    openAlert("먼저 게임을 시작하세요.");
-    return;
-  }
+  if(!correctSet.length) return;
 
   const currentStart = Number(sel.verse);
   const nextStart = currentStart + settings.n;
 
   const verses = getVerses(sel.book, sel.chap).map(v=>Number(v));
-  if(!verses.includes(nextStart)){
-    openAlert("다음 N절이 없습니다. (장 끝)\n다른 절/장을 선택하세요.");
-    return;
-  }
+  if(!verses.includes(nextStart)) return;
 
-  // update selection
   verseSel.value = String(nextStart);
   sel.verse = String(nextStart);
-  updateStatus();
 
-  // build next set and render
   const set = buildConsecutiveSet(sel.book, sel.chap, sel.verse, settings.n);
   correctSet = set;
   shuffled = shuffleArray(set);
 
   const endVerse = Number(set[set.length-1].verse);
-  refTitle.textContent = `${sel.book} ${sel.chap}:${nextStart} ~ ${sel.book} ${sel.chap}:${endVerse} (총 ${set.length}절, 설정 N=${settings.n})`;
+  refTitle.textContent = `${sel.book} ${sel.chap}:${nextStart} ~ ${sel.book} ${sel.chap}:${endVerse}`;
   renderList(shuffled);
 
   // save time: when moving to next N section
   savePlayState();
 }
 
-/* ===== Button wiring ===== */
+/* Wiring */
 startBtn.addEventListener("click", startGame);
 settingsBtn.addEventListener("click", openSettings);
 
@@ -799,7 +700,7 @@ reshuffleBtn.addEventListener("click", reshuffle);
 answerBtn.addEventListener("click", openAnswer);
 nextBtn.addEventListener("click", nextMove);
 
-/* ===== Boot ===== */
+/* Boot */
 (async function boot(){
   applyDynamicFontByN(settings.n);
 
@@ -808,11 +709,8 @@ nextBtn.addEventListener("click", nextMove);
 
   initSelectors();
 
-  // Restore state (book/chap/verse(start)/N)
   const state = loadPlayState();
-  if(state && applyStateToSelectors(state)){
-    // selection restored; remain on Screen 1 by requirement v03 (start moves to screen 2)
-  }
+  if(state) applyStateToSelectors(state);
 })();
 </script>
 </body>
