@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Bible Verse Ordering Game (v02)</title>
+  <title>Bible Verse Ordering Game (requirement v03)</title>
   <style>
     :root{
       --bg:#0b1120; --card:#0f172a; --line:#1f2937;
@@ -12,8 +12,9 @@
       --shadow: 0 14px 40px rgba(0,0,0,.35);
       --r: 18px;
 
-      /* dynamic verse font size */
+      /* dynamic verse font size (requirement v03) */
       --verse-font: 14px;
+      --verse-meta-font: 12px;
     }
     *{box-sizing:border-box}
     body{
@@ -33,7 +34,10 @@
       color:var(--sub);
     }
 
-    /* Main page (Selection + Command Buttons on one screen) */
+    /* screens */
+    .screen{display:none}
+    .screen.active{display:block}
+
     .grid{display:grid;gap:12px;grid-template-columns:1fr}
     @media(min-width:980px){
       .grid{grid-template-columns: 420px 1fr;}
@@ -81,7 +85,65 @@
       line-height:1.55;
     }
 
-    /* Generic modal */
+    /* Game screen */
+    .refLine{font-size:14px;color:#e0f2fe;margin:0 0 10px}
+    .mini{font-size:12px;color:var(--sub);margin-top:8px}
+    .list{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+
+    .item{
+      display:flex; gap:10px; align-items:flex-start;
+      border:1px solid rgba(31,41,55,.85);
+      background:rgba(2,6,23,.45);
+      border-radius:16px;
+      padding:12px;
+    }
+    .ctrl{
+      display:flex; flex-direction:column; gap:8px; align-items:center;
+      flex:0 0 auto;
+    }
+    .ctrl button{
+      width:40px;
+      padding:6px 0;
+      border-radius:12px;
+      background:rgba(56,189,248,.10);
+      border:1px solid rgba(56,189,248,.30);
+    }
+    .text{font-size:var(--verse-font);line-height:1.6;word-break:keep-all}
+
+    /* Bottom bar fixed (requirement v03) */
+    .bottomBar{
+      position:fixed;
+      left:0; right:0; bottom:0;
+      padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+      background:rgba(2,6,23,.92);
+      border-top:1px solid rgba(31,41,55,.85);
+      backdrop-filter: blur(8px);
+      z-index:500;
+    }
+    .barInner{
+      max-width:1100px;
+      margin:0 auto;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap; /* mobile wrap allowed */
+    }
+    .barInner button{
+      width:auto;
+      flex:1 1 150px;
+      white-space:nowrap;
+      padding:10px 10px;
+      font-size:13px;
+      border-radius:14px;
+    }
+
+    /* add padding so list isn't hidden under bottom bar */
+    .padBottom{
+      padding-bottom:92px;
+    }
+
+    /* Modal (Popups: Settings/Result/Answer/Notification) */
     .modalOverlay{
       position:fixed; inset:0;
       background:rgba(0,0,0,.55);
@@ -92,7 +154,7 @@
       z-index:999;
     }
     .modal{
-      width:min(860px, 100%);
+      width:min(760px, 100%);
       background:rgba(15,23,42,.98);
       border:1px solid rgba(31,41,55,.9);
       border-radius:20px;
@@ -120,7 +182,6 @@
       border-radius:12px;
       background:transparent;
     }
-
     .resultBadge{
       display:inline-block;
       padding:6px 10px;
@@ -133,84 +194,6 @@
     .fail{border-color:rgba(239,68,68,.5); color:#fecaca; background:rgba(239,68,68,.12)}
     .warn{border-color:rgba(245,158,11,.5); color:#fde68a; background:rgba(245,158,11,.12)}
 
-    /* Game modal (v02) */
-    .gameTop{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-    .gameRef{
-      color:#e0f2fe;
-      font-size:14px;
-      margin:0;
-    }
-    .list{
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      margin-top:12px;
-    }
-    .item{
-      border:1px solid rgba(31,41,55,.85);
-      background:rgba(2,6,23,.45);
-      border-radius:16px;
-      padding:12px;
-      display:flex;
-      gap:10px;
-      align-items:flex-start;
-      user-select:none;
-      touch-action:none; /* for pointer dragging on mobile */
-    }
-    .grab{
-      width:34px;
-      flex:0 0 auto;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      border-radius:12px;
-      border:1px solid rgba(56,189,248,.30);
-      background:rgba(56,189,248,.10);
-      color:#bae6fd;
-      font-size:16px;
-      line-height:1;
-      padding:6px 0;
-      cursor:grab;
-    }
-    .item.dragging{
-      opacity:.7;
-      outline:2px solid rgba(56,189,248,.45);
-    }
-    .text{
-      font-size:var(--verse-font);
-      line-height:1.6;
-      word-break:keep-all;
-      flex:1 1 auto;
-    }
-
-    /* Footer button bar in one line (v02 requirement) */
-    .bar{
-      display:flex;
-      gap:10px;
-      flex-wrap:nowrap;
-      align-items:center;
-      justify-content:space-between;
-    }
-    .bar button{
-      width:auto;
-      flex:1 1 0;
-      padding:10px 8px;
-      border-radius:14px;
-      font-size:13px;
-      white-space:nowrap;
-    }
-    @media(max-width:520px){
-      .bar{gap:8px}
-      .bar button{font-size:12px; padding:10px 6px}
-    }
-
-    /* Answer lines */
     .answerLine{
       padding:10px 12px;
       border-radius:14px;
@@ -219,7 +202,7 @@
       margin-bottom:10px;
     }
     .answerLine:last-child{margin-bottom:0}
-    .meta{font-size:12px;color:var(--sub);margin-bottom:6px}
+    .meta{font-size:var(--verse-meta-font);color:var(--sub);margin-bottom:6px}
   </style>
 </head>
 
@@ -227,55 +210,76 @@
 <div class="wrap">
   <h1>
     Bible Verse Ordering Game
-    <span class="pill">requirement v02 (frozen)</span>
+    <span class="pill">requirement v03 (frozen)</span>
     <span class="pill" id="nPill">N=5</span>
   </h1>
 
-  <div class="grid">
-    <!-- LEFT: Selection + Commands -->
-    <div class="card">
-      <div class="sectionTitle">Selection Section <span class="pill">권 → 장 → 절</span></div>
+  <!-- Screen 1: Selection + Command Buttons -->
+  <section id="screen1" class="screen active">
+    <div class="grid">
+      <div class="card">
+        <div class="sectionTitle">Selection Section <span class="pill">권 → 장 → 절</span></div>
 
-      <label>권 (Book)</label>
-      <select id="bookSel"></select>
+        <label>권 (Book)</label>
+        <select id="bookSel"></select>
 
-      <label>장 (Chapter)</label>
-      <select id="chapSel"></select>
+        <label>장 (Chapter)</label>
+        <select id="chapSel"></select>
 
-      <label>절 (Verse) <span class="pill">start</span></label>
-      <select id="verseSel"></select>
+        <label>절 (Verse) <span class="pill">start</span></label>
+        <select id="verseSel"></select>
 
-      <div style="height:14px"></div>
+        <div style="height:14px"></div>
 
-      <div class="sectionTitle">Command Button Section</div>
-      <div class="row">
-        <button class="primary" id="startBtn">게임 시작</button>
-        <button id="settingsBtn">게임 설정</button>
+        <div class="sectionTitle">Command Button Section</div>
+        <div class="row">
+          <button class="primary" id="startBtn">게임 시작</button>
+          <button id="settingsBtn">게임 설정</button>
+        </div>
+
+        <div class="hintBox">
+          • v03: 화면은 2개로 분리됩니다.<br/>
+          • “게임 시작”을 누르면 게임 화면(Screen 2)로 이동합니다.<br/>
+          • N은 5~10 (기본 5) 입니다.<br/>
+          • 상태 저장 키: <b>bible_game_state_v01</b> (권/장/절(start)/N 저장)
+        </div>
       </div>
 
-      <div class="hintBox">
-        • v02: 게임 화면은 팝업에서 드래그로 정렬합니다.<br/>
-        • N은 게임 설정(5~10)에서 변경합니다.<br/>
-        • 장 끝이면 N보다 적어도 게임이 진행됩니다.<br/>
-        • 상태 저장 키: <b>bible_game_state_v01</b> (권/장/절(start)/N 저장)
-      </div>
-    </div>
-
-    <!-- RIGHT: Summary / Status -->
-    <div class="card">
-      <div class="sectionTitle">Status</div>
-      <div class="hintBox" style="margin-top:0">
-        <div><b>현재 선택</b>: <span id="statusSel">-</span></div>
-        <div><b>설정</b>: 연속 구절 수 N = <span id="statusN">5</span></div>
-        <div style="margin-top:8px; color:var(--sub)">
-          “게임 시작”을 누르면 게임 팝업이 열립니다.
+      <div class="card">
+        <div class="sectionTitle">Status</div>
+        <div class="hintBox" style="margin-top:0">
+          <div><b>현재 선택</b>: <span id="statusSel">-</span></div>
+          <div><b>설정</b>: 연속 구절 수 N = <span id="statusN">5</span></div>
+          <div style="margin-top:8px; color:var(--sub)">
+            Screen 2 하단 버튼: 결과 확인 / 다시하기 / 정답 확인 / 다음 이동
+          </div>
         </div>
       </div>
     </div>
+  </section>
+
+  <!-- Screen 2: Game Execution -->
+  <section id="screen2" class="screen">
+    <div class="card padBottom">
+      <div class="sectionTitle">Game Execution Screen Section</div>
+      <p class="refLine" id="refTitle">게임을 시작하면 구절이 표시됩니다.</p>
+      <div class="list" id="list"></div>
+      <div class="mini" id="gameHint">모바일: ▲/▼ 버튼으로 순서 이동</div>
+    </div>
+  </section>
+</div>
+
+<!-- Bottom bar (only on Screen 2) -->
+<div class="bottomBar" id="bottomBar" style="display:none">
+  <div class="barInner">
+    <button id="checkBtn">결과 확인</button>
+    <button class="ghost" id="reshuffleBtn">다시하기(섞기)</button>
+    <button class="ghost" id="answerBtn">정답 확인</button>
+    <button class="primary" id="nextBtn">다음 이동(Next N절)</button>
   </div>
 </div>
 
-<!-- Generic Modal (notifications/settings/answer) -->
+<!-- MODALS -->
 <div class="modalOverlay" id="overlay">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modalHeader">
@@ -287,42 +291,22 @@
   </div>
 </div>
 
-<!-- Game Modal (v02) -->
-<div class="modalOverlay" id="gameOverlay">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="gameTitle">
-    <div class="modalHeader">
-      <div class="gameTop">
-        <h2 class="modalTitle" id="gameTitle">게임</h2>
-        <p class="gameRef" id="gameRef">-</p>
-      </div>
-      <button class="closeBtn" id="gameX">닫기</button>
-    </div>
-
-    <div class="modalBody">
-      <div class="list" id="gameList"></div>
-    </div>
-
-    <!-- v02: one-line button bar INSIDE game popup -->
-    <div class="modalFooter">
-      <div class="bar" style="width:100%">
-        <button id="btnCheck">결과 확인</button>
-        <button class="ghost" id="btnReplay">다시하기</button>
-        <button class="ghost" id="btnAnswer">정답 화면</button>
-        <button class="primary" id="btnClose">닫기</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
 /* =========================================================
-   requirement v02 (frozen) Implementation
-   - Game execution moved to a popup
-   - In-game popup has 1-line buttons: Check / Replay / Answer / Close
-   - Ordering via Drag (pointer-based, mobile-friendly)
-   - Keeps v01 frozen rules: data load, N(5~10 default 5), end-of-chapter allowed,
-     persistence key bible_game_state_v01 saving book/chap/verse(start)/N
-     save times: start / next section (not used in UI here) / save settings
+   requirement v03 Implementation
+   - Two screens:
+     Screen 1: Selection + Required buttons (Start, Settings)
+     Screen 2: Game Execution list
+   - Start button navigates to Screen 2 automatically
+   - Bottom fixed bar on Screen 2: Check / Replay / Answer / Next Move
+   - Data: verse_krv.json
+   - N: min 5, max 10, default 5
+   - End-of-chapter => allow fewer verses
+   - Ordering: ▲/▼ buttons
+   - Popups: Settings/Result/Answer/Notification
+   - Persist state in localStorage key bible_game_state_v01: book/chap/verse(start)/N
+     Save times: start game / next move / save settings
+     Restore on load/refresh
 ========================================================= */
 
 const STORAGE_KEY = "bible_game_state_v01";
@@ -330,42 +314,46 @@ const STORAGE_KEY = "bible_game_state_v01";
 let RAW = null;
 let BIBLE = null;
 
-let settings = { n: 5 }; // min 5 max 10 default 5
+let settings = { n: 5 };
 let sel = { book:null, chap:null, verse:null };
 
 let correctSet = [];
 let shuffled = [];
 
-/* ========== DOM ========== */
+/* DOM */
 const $ = (id)=>document.getElementById(id);
+
+const screen1 = $("screen1");
+const screen2 = $("screen2");
+const bottomBar = $("bottomBar");
 
 const bookSel = $("bookSel");
 const chapSel = $("chapSel");
 const verseSel = $("verseSel");
+
 const startBtn = $("startBtn");
 const settingsBtn = $("settingsBtn");
 
+const checkBtn = $("checkBtn");
+const reshuffleBtn = $("reshuffleBtn");
+const answerBtn = $("answerBtn");
+const nextBtn = $("nextBtn");
+
+const refTitle = $("refTitle");
+const listEl = $("list");
+
+const nPill = $("nPill");
+const statusSel = $("statusSel");
+const statusN = $("statusN");
+
+/* Modal */
 const overlay = $("overlay");
 const modalTitle = $("modalTitle");
 const modalBody = $("modalBody");
 const modalFooter = $("modalFooter");
 const modalClose = $("modalClose");
 
-const gameOverlay = $("gameOverlay");
-const gameX = $("gameX");
-const gameList = $("gameList");
-const gameRef = $("gameRef");
-
-const btnCheck = $("btnCheck");
-const btnReplay = $("btnReplay");
-const btnAnswer = $("btnAnswer");
-const btnClose = $("btnClose");
-
-const nPill = $("nPill");
-const statusSel = $("statusSel");
-const statusN = $("statusN");
-
-/* ========== Modal helpers ========== */
+/* ===== Modal Helpers ===== */
 function openModal(title, bodyHtml, footerButtons=[]) {
   modalTitle.textContent = title;
   modalBody.innerHTML = bodyHtml;
@@ -406,18 +394,22 @@ function openAlert(msg, title="알림 화면"){
   openModal(title, body, [okBtn]);
 }
 
-/* ========== Game modal helpers ========== */
-function openGameModal(){
-  gameOverlay.style.display = "flex";
+/* ===== Screen Navigation ===== */
+function goScreen(n){
+  if(n === 1){
+    screen1.classList.add("active");
+    screen2.classList.remove("active");
+    bottomBar.style.display = "none";
+    window.scrollTo({top:0, behavior:"instant"});
+  }else{
+    screen1.classList.remove("active");
+    screen2.classList.add("active");
+    bottomBar.style.display = "block";
+    window.scrollTo({top:0, behavior:"instant"});
+  }
 }
-function closeGameModal(){
-  gameOverlay.style.display = "none";
-}
-gameX.addEventListener("click", closeGameModal);
-btnClose.addEventListener("click", closeGameModal);
-gameOverlay.addEventListener("click", (e)=>{ if(e.target === gameOverlay) closeGameModal(); });
 
-/* ========== Data load/normalize ========== */
+/* ===== Data Load + Normalize ===== */
 function normalizeBibleJson(raw){
   if (raw && typeof raw === "object" && raw.chapters && (raw.book_name_kr || raw.book_name)) {
     const name = raw.book_name_kr || raw.book_name;
@@ -460,7 +452,7 @@ async function loadData(){
   }
 }
 
-/* ========== Selects ========== */
+/* ===== Select Fill ===== */
 function fillSelect(el, items, placeholder){
   el.innerHTML = "";
   if(!items || items.length === 0){
@@ -490,8 +482,7 @@ function getVerses(book, chap){
 }
 
 function initSelectors(){
-  const books = getBooks();
-  fillSelect(bookSel, books, "권 없음");
+  fillSelect(bookSel, getBooks(), "권 없음");
 
   bookSel.onchange = ()=>{ sel.book = bookSel.value; updateChapters(); updateStatus(); };
   chapSel.onchange = ()=>{ sel.chap = chapSel.value; updateVerses(); updateStatus(); };
@@ -502,40 +493,36 @@ function initSelectors(){
   updateStatus();
 }
 function updateChapters(){
-  const chaps = getChapters(bookSel.value);
-  fillSelect(chapSel, chaps, "장 없음");
+  fillSelect(chapSel, getChapters(bookSel.value), "장 없음");
   sel.chap = chapSel.value;
   updateVerses();
 }
 function updateVerses(){
-  const verses = getVerses(bookSel.value, chapSel.value);
-  fillSelect(verseSel, verses, "절 없음");
+  fillSelect(verseSel, getVerses(bookSel.value, chapSel.value), "절 없음");
   sel.verse = verseSel.value;
 }
-function updateStatus(){
-  statusSel.textContent = (sel.book && sel.chap && sel.verse) ? `${sel.book} ${sel.chap}:${sel.verse}` : "-";
-  statusN.textContent = String(settings.n);
-  nPill.textContent = `N=${settings.n}`;
-}
 
-/* ========== Dynamic font by N ========== */
+/* ===== Dynamic Font by N ===== */
 function applyDynamicFontByN(n){
   const clamped = Math.max(5, Math.min(10, Number(n)));
   // N=5 -> 15px, N=10 -> 12px
   const font = 15 - (clamped - 5) * (3/5);
+  const meta = 12 - (clamped - 5) * (1/5);
   document.documentElement.style.setProperty("--verse-font", `${font.toFixed(2)}px`);
+  document.documentElement.style.setProperty("--verse-meta-font", `${meta.toFixed(2)}px`);
   settings.n = clamped;
-  updateStatus();
+  nPill.textContent = `N=${clamped}`;
+  statusN.textContent = String(clamped);
 }
 
-/* ========== Build consecutive set (end-of-chapter allowed) ========== */
+/* ===== Game Build (end-of-chapter allowed) ===== */
 function buildConsecutiveSet(book, chap, startVerse, n){
   const verses = getVerses(book, chap).map(v=>Number(v));
   const start = Number(startVerse);
   const startIdx = verses.indexOf(start);
   if(startIdx < 0) return null;
 
-  const slice = verses.slice(startIdx, startIdx + n); // may be shorter at end
+  const slice = verses.slice(startIdx, startIdx + n); // can be shorter at end
   if(slice.length === 0) return null;
 
   const chapterObj = BIBLE[book][chap];
@@ -557,12 +544,57 @@ function shuffleArray(arr){
   return a;
 }
 
+function renderList(items){
+  listEl.innerHTML = "";
+  for(const it of items){
+    const row = document.createElement("div");
+    row.className = "item";
+
+    const ctrl = document.createElement("div");
+    ctrl.className = "ctrl";
+
+    const up = document.createElement("button");
+    up.type = "button";
+    up.textContent = "▲";
+    up.addEventListener("click", ()=> moveItem(it.id, -1));
+
+    const down = document.createElement("button");
+    down.type = "button";
+    down.textContent = "▼";
+    down.addEventListener("click", ()=> moveItem(it.id, +1));
+
+    ctrl.appendChild(up);
+    ctrl.appendChild(down);
+
+    const content = document.createElement("div");
+    content.style.flex = "1 1 auto";
+
+    const text = document.createElement("div");
+    text.className = "text";
+    text.textContent = it.text || "(본문 텍스트 없음)";
+    content.appendChild(text);
+
+    row.appendChild(ctrl);
+    row.appendChild(content);
+
+    listEl.appendChild(row);
+  }
+}
+
+function moveItem(id, dir){
+  const i = shuffled.findIndex(x=>x.id===id);
+  const j = i + dir;
+  if(i < 0 || j < 0 || j >= shuffled.length) return;
+  [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  renderList(shuffled);
+}
+
 function isCorrectOrder(){
   if(shuffled.length !== correctSet.length) return false;
   return shuffled.every((it, idx)=> it.id === correctSet[idx].id);
 }
 
-/* ========== Persistence (v01 key rule retained) ========== */
+/* ===== Persistence (requirement v03 keeps v01 key rules) ===== */
 function savePlayState(){
   try{
     const payload = { book: sel.book, chap: sel.chap, verse: sel.verse, n: settings.n };
@@ -607,178 +639,13 @@ function applyStateToSelectors(state){
   return true;
 }
 
-/* ========== Drag reorder (pointer-based sortable) ========== */
-let dragState = {
-  active: false,
-  dragId: null,
-  startY: 0,
-  currentIndex: -1
-};
-
-function renderGameList(){
-  gameList.innerHTML = "";
-
-  for (const it of shuffled){
-    const row = document.createElement("div");
-    row.className = "item";
-    row.dataset.id = it.id;
-
-    const grab = document.createElement("div");
-    grab.className = "grab";
-    grab.textContent = "≡";
-    grab.title = "드래그로 이동";
-
-    const text = document.createElement("div");
-    text.className = "text";
-    text.textContent = it.text || "(본문 텍스트 없음)";
-
-    row.appendChild(grab);
-    row.appendChild(text);
-
-    // pointer dragging: start on row or handle
-    row.addEventListener("pointerdown", (e)=> onPointerDown(e, row));
-    gameList.appendChild(row);
-  }
+/* ===== Status ===== */
+function updateStatus(){
+  statusSel.textContent = (sel.book && sel.chap && sel.verse) ? `${sel.book} ${sel.chap}:${sel.verse}` : "-";
+  statusN.textContent = String(settings.n);
 }
 
-function indexFromY(clientY){
-  const items = Array.from(gameList.querySelectorAll(".item"));
-  const positions = items.map(el => {
-    const r = el.getBoundingClientRect();
-    return { el, mid: r.top + r.height/2 };
-  });
-  let idx = positions.findIndex(p => clientY < p.mid);
-  if(idx === -1) idx = positions.length - 1;
-  return idx;
-}
-
-function onPointerDown(e, row){
-  // only left click / primary touch
-  if (e.button !== undefined && e.button !== 0) return;
-
-  const id = row.dataset.id;
-  const idx = shuffled.findIndex(x=>x.id===id);
-  if(idx < 0) return;
-
-  dragState.active = true;
-  dragState.dragId = id;
-  dragState.startY = e.clientY;
-  dragState.currentIndex = idx;
-
-  row.classList.add("dragging");
-  row.setPointerCapture(e.pointerId);
-
-  row.addEventListener("pointermove", onPointerMove);
-  row.addEventListener("pointerup", onPointerUp);
-  row.addEventListener("pointercancel", onPointerUp);
-}
-
-function onPointerMove(e){
-  if(!dragState.active) return;
-
-  const fromIdx = shuffled.findIndex(x=>x.id===dragState.dragId);
-  if(fromIdx < 0) return;
-
-  const toIdx = indexFromY(e.clientY);
-  if(toIdx === fromIdx) return;
-
-  const [moved] = shuffled.splice(fromIdx, 1);
-  shuffled.splice(toIdx, 0, moved);
-
-  renderGameList();
-  // mark dragged element
-  const el = gameList.querySelector(`.item[data-id="${CSS.escape(dragState.dragId)}"]`);
-  if(el) el.classList.add("dragging");
-}
-
-function onPointerUp(e){
-  dragState.active = false;
-  dragState.dragId = null;
-
-  const items = Array.from(gameList.querySelectorAll(".item"));
-  items.forEach(el => el.classList.remove("dragging"));
-
-  // Clean up listeners on the element that had capture (best effort)
-  const target = e.currentTarget;
-  if(target && target.removeEventListener){
-    target.removeEventListener("pointermove", onPointerMove);
-    target.removeEventListener("pointerup", onPointerUp);
-    target.removeEventListener("pointercancel", onPointerUp);
-  }
-}
-
-/* ========== Game actions ========== */
-function startGame(){
-  sel.book = bookSel.value;
-  sel.chap = chapSel.value;
-  sel.verse = verseSel.value;
-
-  const set = buildConsecutiveSet(sel.book, sel.chap, sel.verse, settings.n);
-  if(!set){
-    openAlert("선택한 절을 찾을 수 없습니다. (데이터를 확인하세요)");
-    return;
-  }
-
-  correctSet = set;
-  shuffled = shuffleArray(set);
-
-  const start = Number(sel.verse);
-  const endVerse = Number(set[set.length-1].verse);
-  gameRef.textContent = `${sel.book} ${sel.chap}:${start} ~ ${sel.book} ${sel.chap}:${endVerse} (총 ${set.length}절, 설정 N=${settings.n})`;
-
-  renderGameList();
-  openGameModal();
-
-  // v01 save time: when starting the game
-  savePlayState();
-}
-
-function replay(){
-  if(!correctSet.length) return;
-  shuffled = shuffleArray(correctSet);
-  renderGameList();
-}
-
-function openResult(){
-  if(!correctSet.length) return;
-  const ok = isCorrectOrder();
-  const badge = ok
-    ? `<div class="resultBadge success">성공 (PASS) ✅</div>`
-    : `<div class="resultBadge fail">실패 (FAIL) ❌</div>`;
-
-  const body = `
-    ${badge}
-    <div class="hintBox" style="margin:0">
-      ${ok ? "정답 순서입니다!" : "순서가 맞지 않습니다. 드래그로 다시 정렬해 보세요."}
-    </div>
-  `;
-
-  const closeBtn = mkButton("닫기", "primary", closeModal);
-  openModal("게임 결과", body, [closeBtn]);
-}
-
-function openAnswer(){
-  if(!correctSet.length) return;
-
-  const lines = correctSet.map(v=>`
-    <div class="answerLine">
-      <div class="meta">${escapeHtml(v.ref)}</div>
-      <div class="text">${escapeHtml(v.text || "(본문 텍스트 없음)")}</div>
-    </div>
-  `).join("");
-
-  const body = `
-    <div class="resultBadge warn">정답 화면</div>
-    <div class="hintBox" style="margin-top:0">아래는 올바른 순서(정답)입니다.</div>
-    <div style="height:10px"></div>
-    ${lines}
-  `;
-
-  const closeBtn = mkButton("닫기", "primary", closeModal);
-  openModal("정답 화면", body, [closeBtn]);
-}
-
-/* ========== Settings (only N: 5~10) ========== */
+/* ===== Popups: Settings / Result / Answer ===== */
 function openSettings(){
   const body = `
     <div class="resultBadge warn">게임 설정</div>
@@ -802,7 +669,7 @@ function openSettings(){
     const n = Number(nSel?.value ?? 5);
     applyDynamicFontByN(n);
 
-    // v01 save time: when saving settings
+    // save time: when saving settings
     savePlayState();
 
     closeModal();
@@ -812,15 +679,127 @@ function openSettings(){
   openModal("게임 설정", body, [cancelBtn, saveBtn]);
 }
 
-/* ========== Wire buttons ========== */
+function openResult(){
+  if(!correctSet.length){
+    openAlert("먼저 게임을 시작하세요.");
+    return;
+  }
+  const ok = isCorrectOrder();
+  const badge = ok
+    ? `<div class="resultBadge success">성공 (PASS) ✅</div>`
+    : `<div class="resultBadge fail">실패 (FAIL) ❌</div>`;
+
+  const body = `
+    ${badge}
+    <div class="hintBox" style="margin:0">
+      ${ok ? "정답 순서입니다!" : "순서가 맞지 않습니다. ▲/▼로 다시 정렬해 보세요."}
+    </div>
+  `;
+  const closeBtn = mkButton("닫기", "primary", closeModal);
+  openModal("게임 결과", body, [closeBtn]);
+}
+
+function openAnswer(){
+  if(!correctSet.length){
+    openAlert("먼저 게임을 시작하세요.");
+    return;
+  }
+  const lines = correctSet.map(v=>`
+    <div class="answerLine">
+      <div class="meta">${escapeHtml(v.ref)}</div>
+      <div class="text">${escapeHtml(v.text || "(본문 텍스트 없음)")}</div>
+    </div>
+  `).join("");
+
+  const body = `
+    <div class="resultBadge warn">정답 화면</div>
+    <div class="hintBox" style="margin-top:0">아래는 올바른 순서(정답)입니다.</div>
+    <div style="height:10px"></div>
+    ${lines}
+  `;
+  const closeBtn = mkButton("닫기", "primary", closeModal);
+  openModal("정답 확인", body, [closeBtn]);
+}
+
+/* ===== Game Actions ===== */
+function startGame(){
+  sel.book = bookSel.value;
+  sel.chap = chapSel.value;
+  sel.verse = verseSel.value;
+
+  const set = buildConsecutiveSet(sel.book, sel.chap, sel.verse, settings.n);
+  if(!set){
+    openAlert("선택한 절을 찾을 수 없습니다. (데이터를 확인하세요)");
+    return;
+  }
+  correctSet = set;
+  shuffled = shuffleArray(set);
+
+  const start = Number(sel.verse);
+  const endVerse = Number(set[set.length-1].verse);
+  refTitle.textContent = `${sel.book} ${sel.chap}:${start} ~ ${sel.book} ${sel.chap}:${endVerse} (총 ${set.length}절, 설정 N=${settings.n})`;
+
+  renderList(shuffled);
+
+  // save time: when starting the game
+  savePlayState();
+
+  // requirement v03: move to Screen 2 automatically
+  goScreen(2);
+}
+
+function reshuffle(){
+  if(!correctSet.length){
+    openAlert("먼저 게임을 시작하세요.");
+    return;
+  }
+  shuffled = shuffleArray(correctSet);
+  renderList(shuffled);
+}
+
+function nextMove(){
+  if(!correctSet.length){
+    openAlert("먼저 게임을 시작하세요.");
+    return;
+  }
+
+  const currentStart = Number(sel.verse);
+  const nextStart = currentStart + settings.n;
+
+  const verses = getVerses(sel.book, sel.chap).map(v=>Number(v));
+  if(!verses.includes(nextStart)){
+    openAlert("다음 N절이 없습니다. (장 끝)\n다른 절/장을 선택하세요.");
+    return;
+  }
+
+  // update selection
+  verseSel.value = String(nextStart);
+  sel.verse = String(nextStart);
+  updateStatus();
+
+  // build next set and render
+  const set = buildConsecutiveSet(sel.book, sel.chap, sel.verse, settings.n);
+  correctSet = set;
+  shuffled = shuffleArray(set);
+
+  const endVerse = Number(set[set.length-1].verse);
+  refTitle.textContent = `${sel.book} ${sel.chap}:${nextStart} ~ ${sel.book} ${sel.chap}:${endVerse} (총 ${set.length}절, 설정 N=${settings.n})`;
+  renderList(shuffled);
+
+  // save time: when moving to next N section
+  savePlayState();
+}
+
+/* ===== Button wiring ===== */
 startBtn.addEventListener("click", startGame);
 settingsBtn.addEventListener("click", openSettings);
 
-btnCheck.addEventListener("click", openResult);
-btnReplay.addEventListener("click", replay);
-btnAnswer.addEventListener("click", openAnswer);
+checkBtn.addEventListener("click", openResult);
+reshuffleBtn.addEventListener("click", reshuffle);
+answerBtn.addEventListener("click", openAnswer);
+nextBtn.addEventListener("click", nextMove);
 
-/* ========== Boot ========== */
+/* ===== Boot ===== */
 (async function boot(){
   applyDynamicFontByN(settings.n);
 
@@ -829,11 +808,10 @@ btnAnswer.addEventListener("click", openAnswer);
 
   initSelectors();
 
-  // Restore (book/chap/verse(start)/N)
+  // Restore state (book/chap/verse(start)/N)
   const state = loadPlayState();
   if(state && applyStateToSelectors(state)){
-    // keep selection restored; user can press start to open popup
-    // (If you want auto-open game, tell me and I’ll change it.)
+    // selection restored; remain on Screen 1 by requirement v03 (start moves to screen 2)
   }
 })();
 </script>
