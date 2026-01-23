@@ -217,7 +217,7 @@
             5) <b>정답 화면</b>: 올바른 순서로 5절을 보여줍니다.<br/>
             6) <b>다음 5절</b>: 다음 묶음(5절)로 이동합니다.
           </div>
-          <div class="mini">※ 본문 텍스트는 <b>verses_krv.json</b>에서 로드합니다.</div>
+          <div class="mini">※ 본문 텍스트는 <b>verse_krv.json</b>에서 로드합니다.</div>
         </div>
       </div>
 
@@ -246,11 +246,24 @@
 <script>
 /* ========= Data ========= */
 /**
- * verses_krv.json format:
+ * Supports BOTH formats:
+ *
+ * (A) Old format:
  * {
- *   "창세기": { "1": { "1": "text", "2": "text" ... } },
- *   "마태복음": { "5": { "1": "text" ... } }
+ *   "창세기": { "1": { "1":"text", "2":"text" } },
+ *   "시편":   { "1": { "1":"text" } }
  * }
+ *
+ * (B) New format (your current):
+ * {
+ *   "version": "KRV",
+ *   "book_id": 19,
+ *   "book_name_kr": "시편",
+ *   "chapters": { "1": { "1":"text" } }
+ * }
+ *
+ * We normalize to:
+ *   BIBLE = { [bookName]: chaptersObj }
  */
 const FALLBACK = {
   "창세기": { "1": { "1":"샘플 1", "2":"샘플 2", "3":"샘플 3", "4":"샘플 4", "5":"샘플 5", "6":"샘플 6", "7":"샘플 7", "8":"샘플 8", "9":"샘플 9", "10":"샘플 10" } }
@@ -259,14 +272,13 @@ let BIBLE = null;
 
 /* ========= State ========= */
 let sel = { book:null, chap:null, startVerse:null };
-let correctSet = [];  // correct order
-let shuffled = [];    // current order
+let correctSet = [];
+let shuffled = [];
 let currentStart = null;
 
 const settings = {
-  verseCount: 5,          // fixed to 5 for now
-  showVerseRef: true,     // display references
-  autoShowResult: false   // if true, result popup opens right after reorder (not used here)
+  verseCount: 5,          // fixed to 5
+  showVerseRef: true
 };
 
 /* ========= DOM ========= */
@@ -296,10 +308,8 @@ const modalClose = $("modalClose");
 function openModal(title, bodyHtml, footerButtons=[]) {
   modalTitle.textContent = title;
   modalBody.innerHTML = bodyHtml;
-
   modalFooter.innerHTML = "";
   for (const btn of footerButtons) modalFooter.appendChild(btn);
-
   overlay.style.display = "flex";
 }
 function closeModal() {
@@ -320,12 +330,49 @@ function mkButton(text, cls, onClick) {
   return b;
 }
 
-/* ========= Data Load ========= */
+function openAlert(title, msg){
+  const body = `
+    <div class="resultBadge warn">알림</div>
+    <div class="desc">${escapeHtml(msg)}</div>
+  `;
+  const okBtn = mkButton("확인", "primary", closeModal);
+  openModal(title, body, [okBtn]);
+}
+
+function escapeHtml(s){
+  return String(s)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+/* ========= Data Load + Normalize ========= */
+function normalizeBibleJson(json){
+  // New format: has chapters + book_name_kr
+  if (json && typeof json === "object" && json.chapters && (json.book_name_kr || json.book_name)) {
+    const bookName = json.book_name_kr || json.book_name;
+    // normalize to { [bookName]: chapters }
+    return { [bookName]: json.chapters };
+  }
+
+  // Old format: object where each key is a book name and value is chapters object
+  // Heuristic: if any top-level value is an object and contains chapter keys like "1"
+  if (json && typeof json === "object" && !Array.isArray(json)) {
+    return json;
+  }
+
+  return FALLBACK;
+}
+
 async function loadData(){
   try{
-    const res = await fetch("./verses_krv.json", {cache:"no-store"});
+    // IMPORTANT: new file name is verse_krv.json
+    const res = await fetch("./verse_krv.json", {cache:"no-store"});
     if(!res.ok) throw new Error("no json");
-    BIBLE = await res.json();
+    const raw = await res.json();
+    BIBLE = normalizeBibleJson(raw);
   }catch(e){
     BIBLE = FALLBACK;
   }
@@ -385,6 +432,7 @@ function getNVerseSet(book, chap, startV, n=5){
   const s = Number(startV);
   const idx = verses.indexOf(s);
   if(idx < 0) return null;
+
   const slice = verses.slice(idx, idx+n);
   if(slice.length < n) return null;
 
@@ -405,7 +453,6 @@ function shuffleArray(arr){
   }
   return a;
 }
-
 function enableGameButtons(enabled){
   checkBtn.disabled = !enabled;
   reshuffleBtn.disabled = !enabled;
@@ -444,12 +491,11 @@ function moveItem(id, dir){
 
 function renderList(items){
   listEl.innerHTML = "";
-
   for(const it of items){
     const row = document.createElement("div");
     row.className = "item";
 
-    // ▲▼ controls (mobile-friendly)
+    // ▲▼ controls
     const ctrl = document.createElement("div");
     ctrl.className = "ctrl";
 
@@ -473,12 +519,11 @@ function renderList(items){
     const meta = document.createElement("div");
     meta.className = "meta";
     meta.textContent = settings.showVerseRef ? it.ref : "";
+    if(!settings.showVerseRef) meta.style.display = "none";
 
     const text = document.createElement("div");
     text.className = "text";
     text.textContent = it.text || "(본문 텍스트 없음)";
-
-    if(!settings.showVerseRef) meta.style.display = "none";
 
     content.appendChild(meta);
     content.appendChild(text);
@@ -509,7 +554,7 @@ function openSettings(){
     </div>
     <div style="height:10px"></div>
     <div class="desc">
-      설정은 즉시 적용됩니다. (데이터는 <b>verses_krv.json</b>에서 로드)
+      설정은 즉시 적용됩니다.
     </div>
   `;
 
@@ -522,7 +567,6 @@ function openSettings(){
   });
 
   const cancelBtn = mkButton("취소", "", closeModal);
-
   openModal("게임 설정", body, [cancelBtn, saveBtn]);
 }
 
@@ -573,24 +617,6 @@ function openAnswer(){
   openModal("정답 화면", body, [closeBtn]);
 }
 
-function openAlert(title, msg){
-  const body = `
-    <div class="resultBadge warn">알림</div>
-    <div class="desc">${escapeHtml(msg)}</div>
-  `;
-  const okBtn = mkButton("확인", "primary", closeModal);
-  openModal(title, body, [okBtn]);
-}
-
-function escapeHtml(s){
-  return String(s)
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
-}
-
 /* ========= Buttons ========= */
 startBtn.addEventListener("click", startGame);
 checkBtn.addEventListener("click", openResult);
@@ -616,7 +642,6 @@ nextBtn.addEventListener("click", ()=>{
     openAlert("알림 화면","다음 5절이 없습니다. (장 끝) 다른 절 또는 다른 장/권을 선택하세요.");
     return;
   }
-  // move selector to next
   currentStart = nextStart;
   verseSel.value = String(nextStart);
   sel.startVerse = String(nextStart);
