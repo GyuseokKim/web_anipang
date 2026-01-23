@@ -11,7 +11,6 @@
       --r: 18px;
 
       --verse-font: 14px;
-      --verse-meta-font: 12px;
 
       --accent:#38bdf8;
       --fixed-bg: rgba(56,189,248,.14);
@@ -22,6 +21,12 @@
       --card-bg: rgba(15,23,42,.95);
       --item-bg: rgba(2,6,23,.45);
       --line: rgba(31,41,55,.85);
+
+      --bad-line: rgba(255, 140, 0, .80);   /* orange neon */
+      --bad-glow: rgba(255, 140, 0, .45);
+
+      --good-line: rgba(56,189,248,.62);    /* same family as fixed */
+      --good-glow: rgba(56,189,248,.26);
     }
     *{box-sizing:border-box}
     body{
@@ -82,9 +87,34 @@
       border-radius:16px;
       padding:12px;
       position:relative;
+      transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+      overflow:hidden;
     }
 
-    /* Fixed-first-verse visual highlight (v04) */
+    /* Verse number chip */
+    .verseNo{
+      flex:0 0 auto;
+      width:44px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      padding-top:2px;
+    }
+    .verseNo .chip{
+      min-width:34px;
+      text-align:center;
+      padding:6px 8px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.25);
+      background:rgba(2,6,23,.35);
+      color:#e5e7eb;
+      font-size:12px;
+      line-height:1;
+      user-select:none;
+    }
+    .verseNo.hidden{visibility:hidden}
+
+    /* Fixed-first-verse highlight */
     .item.fixedVerse{
       background:linear-gradient(180deg, var(--fixed-bg), rgba(2,6,23,.35));
       border-color: var(--fixed-line);
@@ -107,11 +137,24 @@
       user-select:none;
       white-space:nowrap;
     }
-    .fixedBadge .lock{
-      font-size:12px;
-      line-height:1;
+    .fixedBadge .lock{font-size:12px;line-height:1}
+
+    /* v05 per-card alignment styles */
+    .item.stateBad{
+      border-color: var(--bad-line);
+      box-shadow: 0 0 0 2px rgba(255,140,0,.18) inset, 0 0 18px var(--bad-glow);
+    }
+    .item.stateGood{
+      border-color: var(--good-line);
+      box-shadow: 0 0 0 2px rgba(56,189,248,.16) inset, 0 0 16px var(--good-glow);
+    }
+    .item.stateGood .verseNo .chip{
+      border-color: rgba(56,189,248,.45);
+      background: rgba(56,189,248,.12);
+      color: #bae6fd;
     }
 
+    /* Up/Down controls */
     .ctrl{
       display:flex; flex-direction:column; gap:8px; align-items:center;
       flex:0 0 auto;
@@ -126,10 +169,16 @@
       border:1px solid rgba(56,189,248,.30);
       font-size:14px;
     }
-    .text{font-size:var(--verse-font);line-height:1.6;word-break:keep-all}
-    .meta{font-size:var(--verse-meta-font);color:var(--sub);margin-bottom:6px}
 
-    /* Bottom bar fixed — must stay one line (no wrap) */
+    .text{
+      font-size:var(--verse-font);
+      line-height:1.6;
+      word-break:keep-all;
+      flex:1 1 auto;
+      padding-top:2px;
+    }
+
+    /* Bottom bar fixed — must fit on one screen, no horizontal scroll */
     .bottomBar{
       position:fixed;
       left:0; right:0; bottom:0;
@@ -142,27 +191,25 @@
     .barInner{
       max-width:1100px;
       margin:0 auto;
-      display:flex;
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
       gap:8px;
       align-items:center;
-      justify-content:space-between;
-      flex-wrap:nowrap;         /* one line only */
-      overflow-x:auto;          /* if very narrow, allow horizontal scroll but keep one line */
-      -webkit-overflow-scrolling: touch;
     }
-    .barInner::-webkit-scrollbar{height:0}
     .barInner button{
-      width:auto;
-      flex:0 0 auto;            /* prevent wrapping */
-      white-space:nowrap;
-      padding:10px 10px;
-      font-size:13px;
+      width:100%;
+      min-width:0;
+      padding:10px 8px;
       border-radius:14px;
-      min-width:92px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      font-size: clamp(11px, 3.0vw, 14px);
     }
+
     .padBottom{padding-bottom:92px;}
 
-    /* Modal */
+    /* Modal (Complete / Alert only) */
     .modalOverlay{
       position:fixed; inset:0;
       background:rgba(0,0,0,.55);
@@ -173,7 +220,7 @@
       z-index:999;
     }
     .modal{
-      width:min(760px, 100%);
+      width:min(560px, 100%);
       background:rgba(15,23,42,.98);
       border:1px solid rgba(31,41,55,.9);
       border-radius:20px;
@@ -188,7 +235,7 @@
       background:rgba(2,6,23,.35);
     }
     .modalTitle{margin:0;font-size:15px;color:#bae6fd}
-    .modalBody{padding:14px}
+    .modalBody{padding:16px}
     .modalFooter{
       padding:12px 14px;
       border-top:1px solid rgba(31,41,55,.85);
@@ -201,26 +248,17 @@
       border-radius:12px;
       background:transparent;
     }
-    .resultBadge{
+    .badgeComplete{
       display:inline-block;
-      padding:6px 10px;
+      padding:7px 12px;
       border-radius:999px;
-      border:1px solid rgba(148,163,184,.25);
+      border:1px solid rgba(56,189,248,.45);
+      background:rgba(56,189,248,.14);
+      color:#bae6fd;
       font-size:13px;
-      margin-bottom:10px;
+      margin-bottom:12px;
     }
-    .success{border-color:rgba(34,197,94,.5); color:#bbf7d0; background:rgba(34,197,94,.12)}
-    .fail{border-color:rgba(239,68,68,.5); color:#fecaca; background:rgba(239,68,68,.12)}
-    .warn{border-color:rgba(245,158,11,.5); color:#fde68a; background:rgba(245,158,11,.12)}
-
-    .answerLine{
-      padding:10px 12px;
-      border-radius:14px;
-      border:1px solid rgba(31,41,55,.75);
-      background:rgba(2,6,23,.35);
-      margin-bottom:10px;
-    }
-    .answerLine:last-child{margin-bottom:0}
+    .completeText{color:var(--text);line-height:1.6}
   </style>
 </head>
 
@@ -269,15 +307,13 @@
 <!-- Bottom bar (Screen 2 only) -->
 <div class="bottomBar" id="bottomBar" style="display:none">
   <div class="barInner">
-    <button id="checkBtn">결과 확인</button>
-    <button class="ghost" id="retryBtn">다시하기</button>
-    <button class="ghost" id="answerBtn">정답 확인</button>
-    <button class="primary" id="nextBtn">다음 이동</button>
-    <button id="returnBtn">돌아가기</button>
+    <button class="ghost" id="creationBtn">Creation</button>
+    <button class="primary" id="multiMoveBtn">Multi-verse movement</button>
+    <button id="returnBtn">Return</button>
   </div>
 </div>
 
-<!-- MODALS -->
+<!-- MODAL (Complete / Alert only) -->
 <div class="modalOverlay" id="overlay">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modalHeader">
@@ -290,16 +326,6 @@
 </div>
 
 <script>
-/* =========================================================
-   index_v04.html (requirement v04)
-   - Screen2: 첫 구절(시작 절) 고정 + 시각적 하이라이트 + ▲/▼ 없음
-   - Screen2: 나머지 구절(2번째~)에만 ▲/▼ 존재
-   - Bottom bar one line: 결과/다시/정답/다음/돌아가기
-   - 다음 이동: 다음 N세트 → 장 끝이면 다음 장 1절 → 다음 장 없으면 Screen1
-   - 상태 저장: 게임 시작 / 다음 이동 / 설정 저장
-   - 저장 키: bible_game_state_v01
-========================================================= */
-
 const STORAGE_KEY = "bible_game_state_v01";
 
 let RAW = null;
@@ -308,8 +334,9 @@ let BIBLE = null;
 let settings = { n: 5 };
 let sel = { book:null, chap:null, verse:null };
 
-let correctSet = [];   // [fixed, ...movableCorrect]
-let shuffled = [];     // [fixed, ...movableShuffled]
+let correctSet = [];
+let shuffled = [];
+let completeShown = false;
 
 /* DOM */
 const $ = (id)=>document.getElementById(id);
@@ -325,10 +352,8 @@ const verseSel = $("verseSel");
 const startBtn = $("startBtn");
 const settingsBtn = $("settingsBtn");
 
-const checkBtn = $("checkBtn");
-const retryBtn = $("retryBtn");
-const answerBtn = $("answerBtn");
-const nextBtn = $("nextBtn");
+const creationBtn = $("creationBtn");
+const multiMoveBtn = $("multiMoveBtn");
 const returnBtn = $("returnBtn");
 
 const refTitle = $("refTitle");
@@ -341,7 +366,6 @@ const modalBody = $("modalBody");
 const modalFooter = $("modalFooter");
 const modalClose = $("modalClose");
 
-/* ===== Modal Helpers ===== */
 function openModal(title, bodyHtml, footerButtons=[]) {
   modalTitle.textContent = title;
   modalBody.innerHTML = bodyHtml;
@@ -374,15 +398,20 @@ function escapeHtml(s){
     .replaceAll("'","&#039;");
 }
 function openAlert(msg, title="알림"){
-  const body = `
-    <div class="resultBadge warn">알림</div>
-    <div style="color:var(--sub);line-height:1.6">${escapeHtml(msg).replaceAll("\n","<br/>")}</div>
-  `;
+  const body = `<div class="completeText">${escapeHtml(msg).replaceAll("\n","<br/>")}</div>`;
   const okBtn = mkButton("확인", "primary", closeModal);
   openModal(title, body, [okBtn]);
 }
+function openComplete(){
+  const body = `
+    <div class="badgeComplete">Complete!!</div>
+    <div class="completeText">순서를 정확히 맞췄습니다.</div>
+  `;
+  const okBtn = mkButton("확인", "primary", closeModal);
+  openModal("Complete!!", body, [okBtn]);
+}
 
-/* ===== Screen Navigation ===== */
+/* Screen Navigation */
 function goScreen(n){
   if(n === 1){
     screen1.classList.add("active");
@@ -397,7 +426,7 @@ function goScreen(n){
   }
 }
 
-/* ===== Data Load + Normalize ===== */
+/* Data Load + Normalize */
 function normalizeBibleJson(raw){
   if (raw && typeof raw === "object" && raw.chapters && (raw.book_name_kr || raw.book_name)) {
     const name = raw.book_name_kr || raw.book_name;
@@ -427,7 +456,7 @@ async function loadData(){
     console.error("Failed to load verse_krv.json:", e);
     openAlert(
       "verse_krv.json 로드 실패\n\n" +
-      "1) index_v04.html과 같은 폴더인지\n" +
+      "1) index_v05.html과 같은 폴더인지\n" +
       "2) /verse_krv.json이 열리는지\n" +
       "3) JSON 문법 오류가 없는지\n\n" +
       `오류: ${String(e)}`
@@ -436,7 +465,7 @@ async function loadData(){
   }
 }
 
-/* ===== Select Fill ===== */
+/* Select Fill */
 function fillSelect(el, items, placeholder){
   el.innerHTML = "";
   if(!items || items.length === 0){
@@ -453,7 +482,6 @@ function fillSelect(el, items, placeholder){
     el.appendChild(opt);
   }
 }
-
 function getBooks(){ return Object.keys(BIBLE || {}); }
 function getChapters(book){
   const ch = (BIBLE && BIBLE[book]) ? Object.keys(BIBLE[book]) : [];
@@ -464,7 +492,6 @@ function getVerses(book, chap){
   const vs = Object.keys(obj);
   return vs.sort((a,b)=>Number(a)-Number(b));
 }
-
 function initSelectors(){
   fillSelect(bookSel, getBooks(), "권 없음");
 
@@ -485,31 +512,28 @@ function updateVerses(){
   sel.verse = verseSel.value;
 }
 
-/* ===== Dynamic Font by N ===== */
+/* Dynamic Font by N */
 function applyDynamicFontByN(n){
   const clamped = Math.max(5, Math.min(10, Number(n)));
   const font = 15 - (clamped - 5) * (3/5);
-  const meta = 12 - (clamped - 5) * (1/5);
   document.documentElement.style.setProperty("--verse-font", `${font.toFixed(2)}px`);
-  document.documentElement.style.setProperty("--verse-meta-font", `${meta.toFixed(2)}px`);
   settings.n = clamped;
 }
 
-/* ===== Game Build ===== */
+/* Build Set */
 function buildConsecutiveSet(book, chap, startVerse, n){
   const verses = getVerses(book, chap).map(v=>Number(v));
   const start = Number(startVerse);
   const startIdx = verses.indexOf(start);
   if(startIdx < 0) return null;
 
-  const slice = verses.slice(startIdx, startIdx + n); // 장 끝이면 더 적을 수 있음
+  const slice = verses.slice(startIdx, startIdx + n);
   if(slice.length === 0) return null;
 
   const chapterObj = BIBLE[book][chap];
   return slice.map((v,i)=>({
     id: `${book}|${chap}|${v}`,
     book, chap, verse: String(v),
-    ref: `${book} ${chap}:${v}`,
     text: (chapterObj[String(v)] ?? "").trim(),
     orderIndex: i
   }));
@@ -524,16 +548,17 @@ function shuffleArray(arr){
   return a;
 }
 
-/* ===== Render ===== */
+/* Render */
 function renderList(){
   listEl.innerHTML = "";
   for(let idx=0; idx<shuffled.length; idx++){
     const it = shuffled[idx];
+    const isFixed = (idx === 0);
+
     const row = document.createElement("div");
     row.className = "item";
     row.dataset.id = it.id;
 
-    const isFixed = (idx === 0);
     if(isFixed){
       row.classList.add("fixedVerse");
       const badge = document.createElement("div");
@@ -542,17 +567,25 @@ function renderList(){
       row.appendChild(badge);
     }
 
+    // Verse Number area (always show for first, conditional for others)
+    const verseNo = document.createElement("div");
+    verseNo.className = "verseNo";
+    const chip = document.createElement("div");
+    chip.className = "chip";
+    chip.textContent = it.verse; // "절 번호"
+    verseNo.appendChild(chip);
+    row.appendChild(verseNo);
+
+    // Up/Down controls (first hidden)
     const ctrl = document.createElement("div");
     ctrl.className = "ctrl";
-
     if(isFixed){
-      // 첫 구절은 ▲/▼ 버튼 없음 (아예 숨김)
       ctrl.classList.add("hidden");
     }else{
       const up = document.createElement("button");
       up.type = "button";
       up.textContent = "▲";
-      up.disabled = (idx === 1); // 고정 구절 위로는 못 올라감
+      up.disabled = (idx === 1);
       up.addEventListener("click", ()=> moveByIndex(idx, -1));
 
       const down = document.createElement("button");
@@ -564,52 +597,77 @@ function renderList(){
       ctrl.appendChild(up);
       ctrl.appendChild(down);
     }
+    row.appendChild(ctrl);
 
-    const content = document.createElement("div");
-    content.style.flex = "1 1 auto";
-
-    // (선택) 참조를 아주 작게 표시 — 설명이 아니라 콘텐츠 참조
-    const meta = document.createElement("div");
-    meta.className = "meta";
-    meta.textContent = it.ref;
-
+    // Text (no reference/meta)
     const text = document.createElement("div");
     text.className = "text";
     text.textContent = it.text || "";
+    row.appendChild(text);
 
-    content.appendChild(meta);
-    content.appendChild(text);
-
-    row.appendChild(ctrl);
-    row.appendChild(content);
     listEl.appendChild(row);
+  }
+
+  applyPerCardAlignmentUI();
+}
+
+/* Per-card alignment:
+   - First verse: verse number always visible
+   - Others:
+     - Correct position: show verse number + good highlight
+     - Wrong position: hide verse number + orange highlight
+   - All correct => auto Complete!!
+*/
+function applyPerCardAlignmentUI(){
+  if(!correctSet.length) return;
+
+  const nodes = Array.from(listEl.querySelectorAll(".item"));
+  let allCorrect = true;
+
+  nodes.forEach((node, idx)=>{
+    node.classList.remove("stateBad","stateGood");
+
+    const verseNoEl = node.querySelector(".verseNo");
+    if(!verseNoEl) return;
+
+    if(idx === 0){
+      // fixed: always show number; keep fixed styling
+      verseNoEl.classList.remove("hidden");
+      return;
+    }
+
+    const curId = shuffled[idx]?.id;
+    const correctId = correctSet[idx]?.id;
+    const isCorrectHere = (curId && correctId && curId === correctId);
+
+    if(isCorrectHere){
+      node.classList.add("stateGood");
+      verseNoEl.classList.remove("hidden");
+    }else{
+      node.classList.add("stateBad");
+      verseNoEl.classList.add("hidden");
+      allCorrect = false;
+    }
+  });
+
+  // First verse doesn't affect correctness (always fixed & correct)
+  if(allCorrect && !completeShown){
+    completeShown = true;
+    openComplete();
   }
 }
 
 function moveByIndex(idx, dir){
-  // idx는 1 이상만 허용(0은 고정)
   if(idx <= 0) return;
   const j = idx + dir;
-  if(j <= 0) return; // 고정 구절과 스왑 금지
+  if(j <= 0) return; // cannot swap with fixed first
   if(j >= shuffled.length) return;
 
   [shuffled[idx], shuffled[j]] = [shuffled[j], shuffled[idx]];
   renderList();
 }
 
-/* ===== Correctness ===== */
-function isCorrectOrder(){
-  if(shuffled.length !== correctSet.length) return false;
-  // 첫 구절(고정)은 반드시 동일
-  if(shuffled[0]?.id !== correctSet[0]?.id) return false;
-  // 나머지 순서 비교
-  for(let i=1;i<shuffled.length;i++){
-    if(shuffled[i].id !== correctSet[i].id) return false;
-  }
-  return true;
-}
-
-/* ===== Persistence ===== */
+/* Persistence */
 function savePlayState(){
   try{
     const payload = { book: sel.book, chap: sel.chap, verse: sel.verse, n: settings.n };
@@ -650,53 +708,26 @@ function applyStateToSelectors(state){
   return true;
 }
 
-/* ===== Popups ===== */
+/* Settings popup (kept) */
 function openSettings(){
   const body = `
-    <div class="resultBadge warn">게임 설정</div>
-    <div style="display:grid;grid-template-columns:160px 1fr;gap:10px;align-items:center">
-      <div style="color:var(--sub);font-size:13px">연속 구절 수 (N)</div>
-      <div>
-        <select id="nSel">
-          ${[5,6,7,8,9,10].map(v=>`<option value="${v}" ${v===settings.n?"selected":""}>${v}</option>`).join("")}
-        </select>
-      </div>
-    </div>
+    <div style="color:var(--sub);font-size:13px;margin-bottom:10px">연속 구절 수 (N)</div>
+    <select id="nSel" style="width:100%">
+      ${[5,6,7,8,9,10].map(v=>`<option value="${v}" ${v===settings.n?"selected":""}>${v}</option>`).join("")}
+    </select>
   `;
   const cancelBtn = mkButton("취소", "", closeModal);
   const saveBtn = mkButton("저장", "primary", ()=>{
     const nSel = document.getElementById("nSel");
     const n = Number(nSel?.value ?? 5);
     applyDynamicFontByN(n);
-    savePlayState(); // 설정 저장 시 저장
+    savePlayState();
     closeModal();
   });
   openModal("게임 설정", body, [cancelBtn, saveBtn]);
 }
 
-function openResult(){
-  if(!correctSet.length) return;
-  const ok = isCorrectOrder();
-  const badge = ok
-    ? `<div class="resultBadge success">PASS</div>`
-    : `<div class="resultBadge fail">FAIL</div>`;
-  const closeBtn = mkButton("닫기", "primary", closeModal);
-  openModal("게임 결과", badge, [closeBtn]);
-}
-
-function openAnswer(){
-  if(!correctSet.length) return;
-  const lines = correctSet.map(v=>`
-    <div class="answerLine">
-      <div class="meta">${escapeHtml(v.ref)}</div>
-      <div class="text">${escapeHtml(v.text || "")}</div>
-    </div>
-  `).join("");
-  const closeBtn = mkButton("닫기", "primary", closeModal);
-  openModal("정답", lines, [closeBtn]);
-}
-
-/* ===== Game Actions ===== */
+/* Game actions */
 function startGame(){
   sel.book = bookSel.value;
   sel.chap = chapSel.value;
@@ -705,28 +736,30 @@ function startGame(){
   const set = buildConsecutiveSet(sel.book, sel.chap, sel.verse, settings.n);
   if(!set) return;
 
-  // 첫 구절 고정: 셔플은 2번째 이후만
   correctSet = set;
+
+  // First verse fixed. Shuffle only the rest.
   const fixed = set[0];
   const movableCorrect = set.slice(1);
-  const movableShuffled = shuffleArray(movableCorrect);
-  shuffled = [fixed, ...movableShuffled];
+  shuffled = [fixed, ...shuffleArray(movableCorrect)];
 
   const start = Number(sel.verse);
   const endVerse = Number(set[set.length-1].verse);
   refTitle.textContent = `${sel.book} ${sel.chap}:${start} ~ ${sel.book} ${sel.chap}:${endVerse}`;
 
+  completeShown = false;
   renderList();
-  savePlayState();  // 게임 시작 시 저장
+
+  savePlayState();
   goScreen(2);
 }
 
-function retry(){
+function creation(){
   if(!correctSet.length) return;
   const fixed = correctSet[0];
   const movableCorrect = correctSet.slice(1);
-  const movableShuffled = shuffleArray(movableCorrect);
-  shuffled = [fixed, ...movableShuffled];
+  shuffled = [fixed, ...shuffleArray(movableCorrect)];
+  completeShown = false;
   renderList();
 }
 
@@ -734,12 +767,12 @@ function goToSelectionScreen(){
   goScreen(1);
 }
 
-/* 다음 이동:
-   1) 같은 장에서 nextStart = currentStart + N이 존재하면 이동
-   2) 없으면 다음 장(같은 권)으로 이동, 시작 절은 그 장의 첫 절
-   3) 다음 장이 없으면 Screen1으로 이동
+/* Multi-verse movement:
+   1) same chapter nextStart = currentStart + N exists => move
+   2) else move to next chapter first verse
+   3) if no next chapter => Screen1
 */
-function nextMove(){
+function multiVerseMovement(){
   if(!correctSet.length) return;
 
   const book = sel.book;
@@ -765,18 +798,17 @@ function nextMove(){
     const endVerse = Number(set[set.length-1].verse);
     refTitle.textContent = `${book} ${chap}:${nextStart} ~ ${book} ${chap}:${endVerse}`;
 
+    completeShown = false;
     renderList();
-    savePlayState(); // 다음 이동 시 저장
+    savePlayState();
     return;
   }
 
-  // move to next chapter
   const chapters = getChapters(book).map(c=>Number(c));
   const chapNum = Number(chap);
   const nextChapNum = chapters.find(c=>c > chapNum);
 
   if(nextChapNum === undefined){
-    // no next chapter
     goToSelectionScreen();
     return;
   }
@@ -784,14 +816,12 @@ function nextMove(){
   const nextChap = String(nextChapNum);
   const versesNextChap = getVerses(book, nextChap);
   if(!versesNextChap.length){
-    // chapter exists but empty -> return screen1
     goToSelectionScreen();
     return;
   }
 
   const firstVerse = versesNextChap[0];
 
-  // update selectors state
   chapSel.value = nextChap;
   sel.chap = nextChap;
 
@@ -810,18 +840,17 @@ function nextMove(){
   const endVerse = Number(set[set.length-1].verse);
   refTitle.textContent = `${book} ${nextChap}:${Number(firstVerse)} ~ ${book} ${nextChap}:${endVerse}`;
 
+  completeShown = false;
   renderList();
-  savePlayState(); // 다음 이동(장 이동 포함) 시 저장
+  savePlayState();
 }
 
 /* Wiring */
 startBtn.addEventListener("click", startGame);
 settingsBtn.addEventListener("click", openSettings);
 
-checkBtn.addEventListener("click", openResult);
-retryBtn.addEventListener("click", retry);
-answerBtn.addEventListener("click", openAnswer);
-nextBtn.addEventListener("click", nextMove);
+creationBtn.addEventListener("click", creation);
+multiMoveBtn.addEventListener("click", multiVerseMovement);
 returnBtn.addEventListener("click", goToSelectionScreen);
 
 /* Boot */
