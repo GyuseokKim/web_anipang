@@ -15,8 +15,6 @@
       --accent:#38bdf8;
       --fixed-bg: rgba(56,189,248,.14);
       --fixed-line: rgba(56,189,248,.55);
-      --fixed-badge-bg: rgba(56,189,248,.16);
-      --fixed-badge-line: rgba(56,189,248,.45);
 
       --card-bg: rgba(15,23,42,.95);
       --item-bg: rgba(2,6,23,.45);
@@ -114,30 +112,12 @@
     }
     .verseNo.hidden{visibility:hidden}
 
-    /* Fixed-first-verse highlight */
+    /* Fixed-first-verse highlight (no badge in v05 update) */
     .item.fixedVerse{
       background:linear-gradient(180deg, var(--fixed-bg), rgba(2,6,23,.35));
       border-color: var(--fixed-line);
       box-shadow: 0 0 0 2px rgba(56,189,248,.18) inset;
     }
-    .fixedBadge{
-      position:absolute;
-      top:10px;
-      right:10px;
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-      padding:6px 10px;
-      border-radius:999px;
-      background: var(--fixed-badge-bg);
-      border:1px solid var(--fixed-badge-line);
-      color:#bae6fd;
-      font-size:12px;
-      line-height:1;
-      user-select:none;
-      white-space:nowrap;
-    }
-    .fixedBadge .lock{font-size:12px;line-height:1}
 
     /* v05 per-card alignment styles */
     .item.stateBad{
@@ -307,9 +287,9 @@
 <!-- Bottom bar (Screen 2 only) -->
 <div class="bottomBar" id="bottomBar" style="display:none">
   <div class="barInner">
-    <button class="ghost" id="creationBtn">Creation</button>
-    <button class="primary" id="multiMoveBtn">Multi-verse movement</button>
-    <button id="returnBtn">Return</button>
+    <button class="ghost" id="creationBtn">다시 섞기</button>
+    <button class="primary" id="multiMoveBtn">다음 절 이동</button>
+    <button id="returnBtn">돌아가기</button>
   </div>
 </div>
 
@@ -527,7 +507,7 @@ function buildConsecutiveSet(book, chap, startVerse, n){
   const startIdx = verses.indexOf(start);
   if(startIdx < 0) return null;
 
-  const slice = verses.slice(startIdx, startIdx + n);
+  const slice = verses.slice(startIdx, startIdx + n); // 장 끝이면 더 적을 수 있음
   if(slice.length === 0) return null;
 
   const chapterObj = BIBLE[book][chap];
@@ -548,9 +528,55 @@ function shuffleArray(arr){
   return a;
 }
 
+/* Correctness */
+function isAllCorrect(){
+  if(shuffled.length !== correctSet.length) return false;
+  for(let i=0;i<shuffled.length;i++){
+    if(shuffled[i].id !== correctSet[i].id) return false;
+  }
+  return true;
+}
+function isCorrectAt(i){
+  return !!(shuffled[i] && correctSet[i] && shuffled[i].id === correctSet[i].id);
+}
+
+/* Shuffle rule:
+   - Start verse fixed (index 0 is always correctSet[0])
+   - If length >= 3: initial order must NOT be already all-correct
+   - If length == 2: impossible (only one movable), allow exception
+*/
+function makeInitialShuffledFromCorrectSet(set){
+  const len = set.length;
+  if(len === 0) return [];
+  if(len === 1) return set.slice();
+
+  const fixed = set[0];
+  const rest = set.slice(1);
+
+  if(len === 2){
+    // 구조상 항상 [fixed, rest0]이 정답. 예외로 그대로 둔다.
+    return [fixed, rest[0]];
+  }
+
+  // len >= 3
+  let out = null;
+  for(let t=0; t<40; t++){
+    const candidate = [fixed, ...shuffleArray(rest)];
+    // 정답 순서로 시작하지 않도록 보장
+    const isSolved = candidate.every((v,idx)=>v.id === set[idx].id);
+    if(!isSolved){
+      out = candidate;
+      break;
+    }
+  }
+  // 혹시 운 나쁘면 마지막이라도 한 번 더 섞어서 반환
+  return out || [fixed, ...shuffleArray(rest)];
+}
+
 /* Render */
 function renderList(){
   listEl.innerHTML = "";
+
   for(let idx=0; idx<shuffled.length; idx++){
     const it = shuffled[idx];
     const isFixed = (idx === 0);
@@ -561,41 +587,48 @@ function renderList(){
 
     if(isFixed){
       row.classList.add("fixedVerse");
-      const badge = document.createElement("div");
-      badge.className = "fixedBadge";
-      badge.innerHTML = `<span class="lock">🔒</span><span>시작 절 고정</span>`;
-      row.appendChild(badge);
     }
 
-    // Verse Number area (always show for first, conditional for others)
+    // Verse number area:
+    // - fixed always visible
+    // - others: visible only if card is at correct position
     const verseNo = document.createElement("div");
     verseNo.className = "verseNo";
     const chip = document.createElement("div");
     chip.className = "chip";
-    chip.textContent = it.verse; // "절 번호"
+    chip.textContent = it.verse;
     verseNo.appendChild(chip);
     row.appendChild(verseNo);
 
-    // Up/Down controls (first hidden)
+    // Up/Down controls:
+    // - fixed: hidden
+    // - correct card: hidden
+    // - wrong card: shown, and move only among wrong positions (skip correct positions)
     const ctrl = document.createElement("div");
     ctrl.className = "ctrl";
+
     if(isFixed){
       ctrl.classList.add("hidden");
     }else{
-      const up = document.createElement("button");
-      up.type = "button";
-      up.textContent = "▲";
-      up.disabled = (idx === 1);
-      up.addEventListener("click", ()=> moveByIndex(idx, -1));
+      const correctHere = isCorrectAt(idx);
+      if(correctHere){
+        ctrl.classList.add("hidden"); // ✅ 맞은 카드면 방향 버튼 사라짐
+      }else{
+        const up = document.createElement("button");
+        up.type = "button";
+        up.textContent = "▲";
+        up.disabled = !hasWrongTarget(idx, -1);
+        up.addEventListener("click", ()=> moveToWrong(idx, -1));
 
-      const down = document.createElement("button");
-      down.type = "button";
-      down.textContent = "▼";
-      down.disabled = (idx === shuffled.length - 1);
-      down.addEventListener("click", ()=> moveByIndex(idx, +1));
+        const down = document.createElement("button");
+        down.type = "button";
+        down.textContent = "▼";
+        down.disabled = !hasWrongTarget(idx, +1);
+        down.addEventListener("click", ()=> moveToWrong(idx, +1));
 
-      ctrl.appendChild(up);
-      ctrl.appendChild(down);
+        ctrl.appendChild(up);
+        ctrl.appendChild(down);
+      }
     }
     row.appendChild(ctrl);
 
@@ -608,17 +641,39 @@ function renderList(){
     listEl.appendChild(row);
   }
 
-  applyPerCardAlignmentUI();
+  applyPerCardUI();
 }
 
-/* Per-card alignment:
-   - First verse: verse number always visible
-   - Others:
-     - Correct position: show verse number + good highlight
-     - Wrong position: hide verse number + orange highlight
-   - All correct => auto Complete!!
+/* Wrong-position-only 이동:
+   - 오답 카드에서 ▲/▼를 누르면 "가장 가까운 오답 위치"와 자리 교환
+   - 정답 위치 카드는 건너뛴다.
+   - fixed(0) 위치로는 이동 금지
 */
-function applyPerCardAlignmentUI(){
+function findNearestWrongIndex(fromIdx, dir){
+  for(let j = fromIdx + dir; j >= 1 && j < shuffled.length; j += dir){
+    if(!isCorrectAt(j)) return j;
+  }
+  return -1;
+}
+function hasWrongTarget(fromIdx, dir){
+  return findNearestWrongIndex(fromIdx, dir) !== -1;
+}
+function moveToWrong(fromIdx, dir){
+  const toIdx = findNearestWrongIndex(fromIdx, dir);
+  if(toIdx === -1) return;
+
+  [shuffled[fromIdx], shuffled[toIdx]] = [shuffled[toIdx], shuffled[fromIdx]];
+  renderList();
+}
+
+/* Per-card UI:
+   - fixed(0): verse number always visible, fixed highlight
+   - correct position: show verse number + good highlight
+   - wrong position: hide verse number + orange highlight
+   - all correct AND length >= 3: Complete!! auto popup
+   - length == 2: Complete popup 금지
+*/
+function applyPerCardUI(){
   if(!correctSet.length) return;
 
   const nodes = Array.from(listEl.querySelectorAll(".item"));
@@ -628,43 +683,35 @@ function applyPerCardAlignmentUI(){
     node.classList.remove("stateBad","stateGood");
 
     const verseNoEl = node.querySelector(".verseNo");
-    if(!verseNoEl) return;
 
     if(idx === 0){
-      // fixed: always show number; keep fixed styling
-      verseNoEl.classList.remove("hidden");
+      // 시작절 고정 + 절 번호 항상 표시
+      verseNoEl?.classList.remove("hidden");
       return;
     }
 
-    const curId = shuffled[idx]?.id;
-    const correctId = correctSet[idx]?.id;
-    const isCorrectHere = (curId && correctId && curId === correctId);
-
-    if(isCorrectHere){
+    const correctHere = isCorrectAt(idx);
+    if(correctHere){
       node.classList.add("stateGood");
-      verseNoEl.classList.remove("hidden");
+      verseNoEl?.classList.remove("hidden");
     }else{
       node.classList.add("stateBad");
-      verseNoEl.classList.add("hidden");
+      verseNoEl?.classList.add("hidden");
       allCorrect = false;
     }
   });
 
-  // First verse doesn't affect correctness (always fixed & correct)
-  if(allCorrect && !completeShown){
-    completeShown = true;
-    openComplete();
+  if(allCorrect){
+    // ✅ 카드가 2개면 Complete 팝업 띄우지 않음
+    if(correctSet.length <= 2) return;
+
+    if(!completeShown){
+      completeShown = true;
+      openComplete();
+    }
+  }else{
+    completeShown = false; // 다시 오답 상태가 되면 재완성 가능
   }
-}
-
-function moveByIndex(idx, dir){
-  if(idx <= 0) return;
-  const j = idx + dir;
-  if(j <= 0) return; // cannot swap with fixed first
-  if(j >= shuffled.length) return;
-
-  [shuffled[idx], shuffled[j]] = [shuffled[j], shuffled[idx]];
-  renderList();
 }
 
 /* Persistence */
@@ -737,17 +784,12 @@ function startGame(){
   if(!set) return;
 
   correctSet = set;
-
-  // First verse fixed. Shuffle only the rest.
-  const fixed = set[0];
-  const movableCorrect = set.slice(1);
-  shuffled = [fixed, ...shuffleArray(movableCorrect)];
+  shuffled = makeInitialShuffledFromCorrectSet(set);
 
   const start = Number(sel.verse);
   const endVerse = Number(set[set.length-1].verse);
   refTitle.textContent = `${sel.book} ${sel.chap}:${start} ~ ${sel.book} ${sel.chap}:${endVerse}`;
 
-  completeShown = false;
   renderList();
 
   savePlayState();
@@ -756,10 +798,7 @@ function startGame(){
 
 function creation(){
   if(!correctSet.length) return;
-  const fixed = correctSet[0];
-  const movableCorrect = correctSet.slice(1);
-  shuffled = [fixed, ...shuffleArray(movableCorrect)];
-  completeShown = false;
+  shuffled = makeInitialShuffledFromCorrectSet(correctSet);
   renderList();
 }
 
@@ -767,10 +806,9 @@ function goToSelectionScreen(){
   goScreen(1);
 }
 
-/* Multi-verse movement:
-   1) same chapter nextStart = currentStart + N exists => move
-   2) else move to next chapter first verse
-   3) if no next chapter => Screen1
+/* Next movement:
+   - 다음 N절 세트 → 장 끝이면 다음 장 1절 → 다음 장 없으면 Screen1
+   - (요구) 시작/다음 이동 때도 “정답 순서로 시작하지 않게 섞기” 적용
 */
 function multiVerseMovement(){
   if(!correctSet.length) return;
@@ -791,14 +829,11 @@ function multiVerseMovement(){
     if(!set) return;
 
     correctSet = set;
-    const fixed = set[0];
-    const movableCorrect = set.slice(1);
-    shuffled = [fixed, ...shuffleArray(movableCorrect)];
+    shuffled = makeInitialShuffledFromCorrectSet(set);
 
     const endVerse = Number(set[set.length-1].verse);
     refTitle.textContent = `${book} ${chap}:${nextStart} ~ ${book} ${chap}:${endVerse}`;
 
-    completeShown = false;
     renderList();
     savePlayState();
     return;
@@ -833,14 +868,11 @@ function multiVerseMovement(){
   if(!set) return;
 
   correctSet = set;
-  const fixed = set[0];
-  const movableCorrect = set.slice(1);
-  shuffled = [fixed, ...shuffleArray(movableCorrect)];
+  shuffled = makeInitialShuffledFromCorrectSet(set);
 
   const endVerse = Number(set[set.length-1].verse);
   refTitle.textContent = `${book} ${nextChap}:${Number(firstVerse)} ~ ${book} ${nextChap}:${endVerse}`;
 
-  completeShown = false;
   renderList();
   savePlayState();
 }
