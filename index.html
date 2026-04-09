@@ -623,3 +623,150 @@ body::before{
     </div>
   </div>
 </div>
+
+<!-- ════════════════════════════════════
+  SEC 1 : 상관관계 분석
+════════════════════════════════════ -->
+<div class="sec" id="s1">
+  <div class="sec-header">
+    <div class="sec-icon">🔗</div>
+    <div>
+      <div class="sec-title">상관관계 심층 분석</div>
+      <div class="sec-desc">방향·강도·시차·안정성을 다차원으로 비교</div>
+    </div>
+  </div>
+
+  <!-- 통합 테이블 -->
+  <div class="card">
+    <div class="ch"><span class="pip" style="background:var(--btc)"></span>11대 인자 완전 비교 테이블</div>
+    <div style="overflow-x:auto">
+      <table class="tbl" style="min-width:900px">
+        <tr>
+          <th>#</th><th>인자</th><th>분류</th>
+          <th>방향</th><th>상관계수</th><th>반응 속도</th>
+          <th>안정성</th><th>주요 메커니즘</th><th>현재(2025)</th>
+        </tr>
+        <tr>
+          <td style="color:var(--muted2);font-family:'IBM Plex Mono',monospace;font-size:10px">01</td>
+          <td><strong style="color:var(--green)">💵 글로벌 M2</strong></td>
+          <td><span class="badge b-new">신규</span></td>
+          <td style="color:var(--green)">정(+)</td>
+          <td><strong style="color:var(--green);font-family:'IBM Plex Mono',monospace">+0.94</strong></td>
+          <td>~70일 시차</td>
+          <td><span class="badge b-strong">높음</span></td>
+          <td style="font-size:10px;color:var(--muted2)">유동성 확대 → 위험자산 수요↑</td>
+          <td><span class="fc-signal sig-green" style="font-size:9px;padding:1px 7px;border-radius:6px;display:inline-block">🟢 우호</span></td>
+        </tr>
+        <tr>
+          <td style="color:var(--muted2);font-family:'IBM Plex Mono',monospace;font-size:10px">02</td>
+          <td><strong style="color:#22c55e">₿ 반감기</strong></td>
+          <td><span class="badge b-old">기존</span></td>
+          <td style="color:#22c55e">정(+)</td>
+          <td><strong style="color:#22c55e;font-family:'IBM Plex Mono',monospace">+0.90</strong></td>
+          <td>12~18개월</td>
+          <td><span class="badge b-strong">매우높음</span></td>
+          <td style="font-size:10px;color:var(--muted2)">공급 직접 감소 → 희소성↑</td>
+          <td><span class="fc-signal sig-green" style="font-size:9px;padding:1px 7px;border-radius:6px;display:inline-block">🟢 중반</span></td>
+        </tr>
+        <tr>
+          <td style="color:var(--muted2);font-family:'IBM Plex Mono',monospace;font-size:10px">03</td>
+          <td><strong style="color:var(--purple)">🏦 기관 ETF</strong></td>
+          <td><span class="badge b-new">신규</span></td>
+          <td style="color:var(--purple)">정(+)</td>
+          <td><strong style="color:var(--purple);font-family:'IBM Plex Mono',monospace">+0.85</strong></td>
+          <td>즉각~1일</td>
+          <td><span class="badge b-mod">중간</span></td>
+          <td style="font-size:10px;color:var(--muted2)">일일 흡수량 > 채굴 공급량</td>
+          <td><span class="fc-signal sig-green" style="font-size:9px;padding:1px 7px;border-radius:6px;display:inline-block">🟢 지속</span></td>
+        </tr>
+        <tr>
+          <td style="color:var(--muted2);font-family:'IBM Plex Mono',monospace;font-size:10px">04</td>
+          <td><strong style="color:var(--red)">🏛️ 미국 금리</strong></td>
+          <td><span class="badge b-old">기존</span></td>
+          <td style="color:var(--red)">역(−)</td>
+          <td><strong style="color:var(--red);font-family:'IBM Plex Mono',monospace">−0.80</strong></td>
+          <td>주~1개월</td>
+          <td><span class="badge b-strong">높음</span></td>
+          <td style="font-size:10px;color:var(--muted2)">기회비용↑ · 유동성 축소 · DXY 강세</td>
+          <td><span class="fc-signal sig-green" style="font-size:9px;padding:1px 7px;border-radius:6px;display:inline-block">🟢 인하</span></td>
+        </tr>
+        <tr>
+          <td style="color:var(--muted2);font-family:'IBM Plex Mono',monospace;font-size:10px">05</td>
+          <td><strong style="color:var(--blue)">📈 나스닥</strong></td>
+          <td><span class="badge b-new">신규</span></td>
+          <td style="color:var(--blue)">정(+)</td>
+          <td><strong style="color:var(--blue);font-family:'IBM Plex Mono',monospace">+0.77</strong></td>
+          <td>즉각</td>
+          <td><span class="badge b-mod">중간</span></td>
+          <td style="font-size:10px;color:var(--muted2)">고베타 테크자산 동조화 · 마진콜 동시 매도</td>
+          <td><span class="fc-signal sig-yellow" style="font-size:9px;padding:1px 7px;border-radius:6px;display:inline-block">🟡 변동성</span></td>
+        </tr>
+        <tr>
+          <td style="color:var(--muted2);font-family:'IBM Plex Mono',monospace;font-size:10px">06</td>
+          <td><strong style="color:var(--red)">📉 DXY</strong></td>
+          <td><span class="badge b-new">신규</span></td>
+          <td style="color:var(--red)">역(−)</td>
+          <td><strong style="color:var(--red);font-family:'IBM Plex Mono',monospace">−0.72</strong></td>
+          <td>즉각~1일</td>
+          <td><span class="badge b-strong">높음</span></td>
+          <td style="font-size:10px;color:var(--muted2)">달러 약세 → 글로벌 자본 위험자산 이동</td>
+          <td><span class="fc-signal sig-green" style="font-size:9px;padding:1px 7px;border-radius:6px;display:inline-block">🟢 약세</span></td>
+        </tr>
+        <tr>
+          <td style="color:var(--muted2);font-family:'IBM Plex Mono',monospace;font-size:10px">07</td>
+          <td><strong style="color:var(--orange)">😰 VIX</strong></td>
+          <td><span class="badge b-new">신규</span></td>
+          <td style="color:var(--orange)">역(−)</td>
+          <td><strong style="color:var(--orange);font-family:'IBM Plex Mono',monospace">−0.65</strong></td>
+          <td>즉각</td>
+          <td><span class="badge b-weak">낮음</span></td>
+          <td style="font-size:10px;color:var(--muted2)">공포심 → 위험자산 매도 · 극단공포 후 반등</td>
+          <td><span class="fc-signal sig-orange" style="font-size:9px;padding:1px 7px;border-radius:6px;display:inline-block">🟠 주의</span></td>
+        </tr>
+        <tr>
+          <td style="color:var(--muted2);font-family:'IBM Plex Mono',monospace;font-size:10px">08</td>
+          <td><strong style="color:var(--pink)">🐉 위안화</strong></td>
+          <td><span class="badge b-new">신규</span></td>
+          <td style="color:var(--pink)">역(−)/복합</td>
+          <td><strong style="color:var(--pink);font-family:'IBM Plex Mono',monospace">−0.58</strong></td>
+          <td>수주</td>
+          <td><span class="badge b-weak">낮음</span></td>
+          <td style="font-size:10px;color:var(--muted2)">절하 → 중국 자본도피 BTC 매수</td>
+          <td><span class="fc-signal sig-yellow" style="font-size:9px;padding:1px 7px;border-radius:6px;display:inline-block">🟡 복합</span></td>
+        </tr>
+        <tr>
+          <td style="color:var(--muted2);font-family:'IBM Plex Mono',monospace;font-size:10px">09</td>
+          <td><strong style="color:var(--yellow)">⚡ 전기료</strong></td>
+          <td><span class="badge b-old">기존</span></td>
+          <td style="color:var(--yellow)">정(+)</td>
+          <td><strong style="color:var(--yellow);font-family:'IBM Plex Mono',monospace">+0.55</strong></td>
+          <td>수개월</td>
+          <td><span class="badge b-strong">높음</span></td>
+          <td style="font-size:10px;color:var(--muted2)">채굴 원가 = 가격 하한선(Floor) 형성</td>
+          <td><span class="fc-signal sig-yellow" style="font-size:9px;padding:1px 7px;border-radius:6px;display:inline-block">🟡 중립</span></td>
+        </tr>
+        <tr>
+          <td style="color:var(--muted2);font-family:'IBM Plex Mono',monospace;font-size:10px">10</td>
+          <td><strong style="color:var(--yellow)">🛢️ 유가/CPI</strong></td>
+          <td><span class="badge b-new">신규</span></td>
+          <td style="color:var(--orange)">복합</td>
+          <td><strong style="color:var(--orange);font-family:'IBM Plex Mono',monospace">복합</strong></td>
+          <td>수일~수주</td>
+          <td><span class="badge b-weak">낮음</span></td>
+          <td style="font-size:10px;color:var(--muted2)">헤지 서사(+) vs 금리 인상 유발(−) 충돌</td>
+          <td><span class="fc-signal sig-orange" style="font-size:9px;padding:1px 7px;border-radius:6px;display:inline-block">🟠 지정학</span></td>
+        </tr>
+        <tr>
+          <td style="color:var(--muted2);font-family:'IBM Plex Mono',monospace;font-size:10px">11</td>
+          <td><strong style="color:#FFD700">🥇 국제 금값</strong></td>
+          <td><span class="badge b-old">기존</span></td>
+          <td style="color:#FFD700">정(+) 가변</td>
+          <td><strong style="color:#FFD700;font-family:'IBM Plex Mono',monospace">+0.38</strong></td>
+          <td>수일~수주</td>
+          <td><span class="badge b-weak">낮음</span></td>
+          <td style="font-size:10px;color:var(--muted2)">공통: 달러 약세·실질금리↓. 이외 비상관</td>
+          <td><span class="fc-signal sig-red" style="font-size:9px;padding:1px 7px;border-radius:6px;display:inline-block">🔴 디커플링</span></td>
+        </tr>
+      </table>
+    </div>
+  </div>
