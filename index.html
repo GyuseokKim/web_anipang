@@ -1,94 +1,30 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>2인용 포커</title>
-  <link rel="stylesheet" href="styles.css" />
+<meta charset="UTF-8">
+<title>2인 포커 (AI 포함)</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="app-shell">
-    <header class="topbar">
-      <div>
-        <h1>2인용 포커</h1>
-        <p class="subtitle">GitHub Pages + Firebase Realtime Database 기반</p>
-      </div>
-      <button id="leaveBtn" class="ghost hidden">나가기</button>
-    </header>
 
-    <main>
-      <section id="lobbyScreen" class="panel screen active">
-        <h2>게임 입장</h2>
-        <div class="form-grid">
-          <label>
-            닉네임
-            <input id="nicknameInput" type="text" maxlength="20" placeholder="예: Player1" />
-          </label>
-          <label>
-            방 코드
-            <input id="roomCodeInput" type="text" maxlength="12" placeholder="예: ROOM01" />
-          </label>
-        </div>
-        <div class="button-row">
-          <button id="createRoomBtn">방 만들기</button>
-          <button id="joinRoomBtn" class="secondary">방 참가</button>
-        </div>
-        <div class="info-box">
-          <strong>게임 방식</strong>
-          <p>방 만들기를 누르면 AI 상대 1명이 즉시 참가하여 바로 시작할 수 있습니다. 방 참가를 사용하면 기존 사람 방에도 들어갈 수 있습니다. 각 플레이어는 최대 3장까지 교체하고, 이후 족보를 비교합니다.</p>
-        </div>
-      </section>
+<div id="login">
+    <h2>닉네임 입력</h2>
+    <input id="nickname" placeholder="닉네임">
+    <button onclick="enterLobby()">입장</button>
+</div>
 
-      <section id="waitingScreen" class="panel screen hidden">
-        <h2>대기 중</h2>
-        <p>방 코드: <strong id="waitingRoomCode">-</strong></p>
-        <p>AI 또는 상대 플레이어가 준비되면 자동으로 게임이 시작됩니다.</p>
-        <div id="waitingPlayers" class="player-list"></div>
-      </section>
+<div id="lobby" style="display:none;">
+    <h2>로비</h2>
+    <button onclick="createRoom()">방 만들기 (AI)</button>
+</div>
 
-      <section id="gameScreen" class="screen hidden">
-        <div class="status-grid">
-          <div class="panel">
-            <div class="small-label">방 코드</div>
-            <div id="roomCodeLabel" class="big-value">-</div>
-          </div>
-          <div class="panel">
-            <div class="small-label">현재 단계</div>
-            <div id="phaseLabel" class="big-value">-</div>
-          </div>
-          <div class="panel">
-            <div class="small-label">메시지</div>
-            <div id="messageLabel" class="big-value">-</div>
-          </div>
-        </div>
+<div id="game" style="display:none;">
+    <h2 id="status"></h2>
+    <div id="player"></div>
+    <div id="bot"></div>
+    <button onclick="draw()">카드 교체</button>
+</div>
 
-        <div class="board-grid">
-          <section class="panel">
-            <h3>상대 정보</h3>
-            <div id="opponentInfo"></div>
-            <div id="opponentCards" class="cards"></div>
-          </section>
-
-          <section class="panel">
-            <h3>내 정보</h3>
-            <div id="myInfo"></div>
-            <div id="myCards" class="cards"></div>
-            <div id="selectionHelp" class="selection-help hidden">교체할 카드를 클릭해서 선택하세요. 최대 3장까지 가능합니다.</div>
-            <div class="button-row">
-              <button id="drawBtn" class="hidden">선택 카드 교체</button>
-              <button id="nextRoundBtn" class="hidden">다음 라운드</button>
-            </div>
-          </section>
-        </div>
-
-        <section class="panel">
-          <h3>게임 로그</h3>
-          <div id="logBox" class="log-box"></div>
-        </section>
-      </section>
-    </main>
-  </div>
-
-  <script type="module" src="app.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
