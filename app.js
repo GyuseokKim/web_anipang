@@ -43,6 +43,7 @@ const SUITS = ["S", "H", "D", "C"];
 const SUIT_SYMBOLS = { S: "♠", H: "♥", D: "♦", C: "♣" };
 const RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
 const RANK_VALUE = Object.fromEntries(RANKS.map((r, i) => [r, i + 2]));
+const BOT_ID = "BOT_OPPONENT";
 
 let currentRoomCode = null;
 let currentPlayerId = null;
@@ -50,6 +51,7 @@ let roomRef = null;
 let roomListener = null;
 let selectedIndexes = new Set();
 let latestRoomData = null;
+let botTimer = null;
 
 const qs = new URLSearchParams(location.search);
 if (qs.get("room")) roomCodeInput.value = qs.get("room");
@@ -92,8 +94,7 @@ function createDeck() {
 }
 
 function dealHand(deck, count = 5) {
-  const hand = deck.splice(0, count);
-  return hand;
+  return deck.splice(0, count);
 }
 
 function cardToParts(card) {
@@ -228,30 +229,71 @@ function toggleCardSelection(index) {
   renderRoom(latestRoomData);
 }
 
-async function createGameState(playerIds, players) {
-  const deck = createDeck();
-  const handA = dealHand(deck, 5);
-  const handB = dealHand(deck, 5);
-  const [p1, p2] = playerIds;
-  players[p1].cards = handA;
-  players[p2].cards = handB;
-  players[p1].hasDrawn = false;
-  players[p2].hasDrawn = false;
-  players[p1].ready = true;
-  players[p2].ready = true;
-  players[p1].lastHandName = "";
-  players[p2].lastHandName = "";
+function getConnectedPlayers(room) {
+  return Object.values(room.players || {}).filter((p) => p.connected);
+}
 
-  return {
-    phase: "draw",
-    deck,
-    players,
-    winnerId: null,
-    resultText: "",
-    createdAt: Date.now(),
-    log: [`게임 시작: ${players[p1].name} vs ${players[p2].name}`],
-    round: (latestRoomData?.round || 0) + 1
-  };
+function isBotRoom(room) {
+  return Boolean(room?.botEnabled || room?.players?.[BOT_ID]);
+}
+
+function getBotDiscardIndexes(cards) {
+  const parts = cards.map(cardToParts);
+  const countsByValue = {};
+  const countsBySuit = {};
+  parts.forEach((part) => {
+    countsByValue[part.value] = (countsByValue[part.value] || 0) + 1;
+    countsBySuit[part.suit] = (countsBySuit[part.suit] || 0) + 1;
+  });
+
+  const evaluation = evaluateHand(cards);
+  if (evaluation.rank >= 4) return [];
+
+  const keepIndexes = new Set();
+
+  const suitDraw = Object.entries(countsBySuit).find(([, count]) => count >= 4);
+  if (suitDraw) {
+    const [targetSuit] = suitDraw;
+    parts.forEach((part, index) => {
+      if (part.suit === targetSuit) keepIndexes.add(index);
+    });
+    return parts.map((_, index) => index).filter((index) => !keepIndexes.has(index)).slice(0, 3);
+  }
+
+  const sortedUnique = [...new Set(parts.map((p) => p.value))].sort((a, b) => a - b);
+  let bestStraightWindow = [];
+  for (let i = 0; i < sortedUnique.length; i += 1) {
+    const window = [sortedUnique[i]];
+    for (let j = i + 1; j < sortedUnique.length; j += 1) {
+      if (sortedUnique[j] - window[0] <= 4) window.push(sortedUnique[j]);
+    }
+    if (window.length > bestStraightWindow.length) bestStraightWindow = window;
+  }
+  if (JSON.stringify(sortedUnique) === JSON.stringify([2, 3, 4, 5, 14])) {
+    bestStraightWindow = sortedUnique;
+  }
+  if (bestStraightWindow.length >= 4) {
+    parts.forEach((part, index) => {
+      if (bestStraightWindow.includes(part.value)) keepIndexes.add(index);
+    });
+    return parts.map((_, index) => index).filter((index) => !keepIndexes.has(index)).slice(0, 3);
+  }
+
+  const pairedValues = Object.entries(countsByValue)
+    .filter(([, count]) => count >= 2)
+    .map(([value]) => Number(value));
+  if (pairedValues.length > 0) {
+    parts.forEach((part, index) => {
+      if (pairedValues.includes(part.value)) keepIndexes.add(index);
+    });
+    return parts.map((_, index) => index).filter((index) => !keepIndexes.has(index)).slice(0, 3);
+  }
+
+  const sortedIndexes = parts
+    .map((part, index) => ({ index, value: part.value }))
+    .sort((a, b) => b.value - a.value);
+  sortedIndexes.slice(0, 2).forEach((item) => keepIndexes.add(item.index));
+  return parts.map((_, index) => index).filter((index) => !keepIndexes.has(index)).slice(0, 3);
 }
 
 async function ensureGameStarts(roomCode) {
@@ -278,9 +320,12 @@ async function ensureGameStarts(roomCode) {
     room.phase = "draw";
     room.deck = deck;
     room.winnerId = null;
-    room.resultText = "";
+    room.resultText = room.botEnabled ? "AI와의 대전이 시작되었습니다." : "새 라운드가 시작되었습니다.";
     room.round = (room.round || 0) + 1;
-    room.log = [`라운드 ${room.round} 시작: ${room.players[a].name} vs ${room.players[b].name}`];
+    room.log = [
+      `라운드 ${room.round} 시작: ${room.players[a].name} vs ${room.players[b].name}`,
+      room.botEnabled ? "AI 상대가 자동으로 참가했습니다." : "2명이 접속하여 게임을 시작합니다."
+    ];
     room.updatedAt = Date.now();
     return room;
   });
@@ -321,18 +366,33 @@ async function createOrJoinRoom(mode) {
     return;
   }
 
-  const updates = {};
   if (!room) {
-    updates[`rooms/${roomCode}`] = {
+    const baseRoom = {
       roomCode,
-      phase: "waiting",
+      phase: mode === "create" ? "waiting" : "waiting",
       createdAt: Date.now(),
       updatedAt: Date.now(),
       round: 0,
-      log: ["방이 생성되었습니다."],
+      botEnabled: mode === "create",
+      log: [mode === "create" ? "방이 생성되었습니다. AI 상대를 준비합니다." : "방이 생성되었습니다."],
       players: {}
     };
-    await update(ref(db), updates);
+
+    if (mode === "create") {
+      baseRoom.players[BOT_ID] = {
+        id: BOT_ID,
+        name: "Poker Bot",
+        connected: true,
+        joinedAt: Date.now(),
+        hasDrawn: false,
+        ready: true,
+        cards: [],
+        lastHandName: "",
+        isBot: true
+      };
+    }
+
+    await set(roomRef, baseRoom);
   }
 
   await update(roomRef, {
@@ -344,7 +404,8 @@ async function createOrJoinRoom(mode) {
       hasDrawn: false,
       ready: false,
       cards: [],
-      lastHandName: ""
+      lastHandName: "",
+      isBot: false
     },
     updatedAt: Date.now()
   });
@@ -358,10 +419,6 @@ async function createOrJoinRoom(mode) {
   leaveBtn.classList.remove("hidden");
   attachRoomListener();
   await ensureGameStarts(roomCode);
-}
-
-function getConnectedPlayers(room) {
-  return Object.values(room.players || {}).filter((p) => p.connected);
 }
 
 function renderWaiting(room) {
@@ -401,7 +458,7 @@ function renderRoom(room) {
 
   myInfo.innerHTML = `<strong>${me.name}</strong>${room.winnerId === currentPlayerId ? '<span class="badge">승리</span>' : ''}<div>교체 완료: ${me.hasDrawn ? '예' : '아니오'}</div>${me.lastHandName ? `<div>족보: ${me.lastHandName}</div>` : ''}`;
   opponentInfo.innerHTML = opponent
-    ? `<strong>${opponent.name}</strong>${room.winnerId === opponent.id ? '<span class="badge">승리</span>' : ''}<div>교체 완료: ${opponent.hasDrawn ? '예' : '아니오'}</div>${opponent.lastHandName ? `<div>족보: ${opponent.lastHandName}</div>` : ''}`
+    ? `<strong>${opponent.name}${opponent.isBot ? ' (AI)' : ''}</strong>${room.winnerId === opponent.id ? '<span class="badge">승리</span>' : ''}<div>교체 완료: ${opponent.hasDrawn ? '예' : '아니오'}</div>${opponent.lastHandName ? `<div>족보: ${opponent.lastHandName}</div>` : ''}`
     : "상대 없음";
 
   messageLabel.textContent = room.resultText || (
@@ -429,6 +486,70 @@ function renderRoom(room) {
   nextRoundBtn.classList.toggle("hidden", room.phase !== "finished");
 }
 
+async function performBotDraw() {
+  if (!roomRef || !latestRoomData) return;
+  await runTransaction(roomRef, (data) => {
+    if (!data || data.phase !== "draw") return data;
+    const bot = data.players?.[BOT_ID];
+    if (!bot || !bot.connected || bot.hasDrawn) return data;
+
+    const indexes = getBotDiscardIndexes(bot.cards || []);
+    const newCards = [...(bot.cards || [])];
+    indexes.forEach((index) => {
+      const replacement = data.deck.shift();
+      if (replacement) newCards[index] = replacement;
+    });
+    bot.cards = newCards;
+    bot.hasDrawn = true;
+    data.players[BOT_ID] = bot;
+    data.log = data.log || [];
+    data.log.push(`${bot.name}이 카드 ${indexes.length}장을 교체했습니다.`);
+
+    const everyoneDone = Object.values(data.players).filter((p) => p.connected).every((p) => p.hasDrawn);
+    if (everyoneDone) {
+      const ids = Object.keys(data.players).filter((id) => data.players[id].connected);
+      const [a, b] = ids;
+      const result = compareHands(data.players[a].cards, data.players[b].cards);
+      const evalA = evaluateHand(data.players[a].cards);
+      const evalB = evaluateHand(data.players[b].cards);
+      data.players[a].lastHandName = evalA.name;
+      data.players[b].lastHandName = evalB.name;
+      data.phase = "showdown";
+      if (result > 0) {
+        data.winnerId = a;
+        data.resultText = `${data.players[a].name} 승리 (${evalA.name} vs ${evalB.name})`;
+      } else if (result < 0) {
+        data.winnerId = b;
+        data.resultText = `${data.players[b].name} 승리 (${evalB.name} vs ${evalA.name})`;
+      } else {
+        data.winnerId = "draw";
+        data.resultText = `무승부 (${evalA.name})`;
+      }
+      data.log.push(`쇼다운 결과: ${data.resultText}`);
+      data.phase = "finished";
+    }
+
+    data.updatedAt = Date.now();
+    return data;
+  });
+}
+
+function maybeScheduleBotTurn(room) {
+  if (botTimer) {
+    clearTimeout(botTimer);
+    botTimer = null;
+  }
+  if (!isBotRoom(room)) return;
+  const bot = room.players?.[BOT_ID];
+  const me = room.players?.[currentPlayerId];
+  if (!bot || !me) return;
+  if (room.phase !== "draw" || bot.hasDrawn) return;
+
+  botTimer = setTimeout(() => {
+    performBotDraw().catch((error) => console.error(error));
+  }, 900 + Math.floor(Math.random() * 900));
+}
+
 function attachRoomListener() {
   if (roomListener && roomRef) off(roomRef, "value", roomListener);
   roomListener = onValue(roomRef, async (snapshot) => {
@@ -442,7 +563,9 @@ function attachRoomListener() {
     const connected = getConnectedPlayers(room);
     if (connected.length === 2 && room.phase === "waiting") {
       await ensureGameStarts(currentRoomCode);
+      return;
     }
+    maybeScheduleBotTurn(room);
   });
 }
 
@@ -520,7 +643,7 @@ async function nextRound() {
     data.deck = deck;
     data.phase = "draw";
     data.winnerId = null;
-    data.resultText = "새 라운드 시작";
+    data.resultText = data.botEnabled ? "새 라운드 시작 - AI가 생각 중입니다." : "새 라운드 시작";
     data.round = (data.round || 0) + 1;
     data.log = data.log || [];
     data.log.push(`라운드 ${data.round} 시작`);
@@ -532,13 +655,19 @@ async function nextRound() {
 
 async function leaveRoom(removePlayer = true) {
   selectedIndexes.clear();
+  if (botTimer) {
+    clearTimeout(botTimer);
+    botTimer = null;
+  }
   if (roomRef && roomListener) off(roomRef, "value", roomListener);
   if (removePlayer && currentRoomCode && currentPlayerId) {
     try {
       await remove(ref(db, `rooms/${currentRoomCode}/players/${currentPlayerId}`));
       const snap = await get(ref(db, `rooms/${currentRoomCode}/players`));
-      const remaining = snap.val() ? Object.keys(snap.val()) : [];
-      if (remaining.length === 0) {
+      const remainingPlayers = snap.val() || {};
+      const remainingIds = Object.keys(remainingPlayers);
+      const humanRemaining = remainingIds.filter((id) => !remainingPlayers[id]?.isBot);
+      if (remainingIds.length === 0 || humanRemaining.length === 0) {
         await remove(ref(db, `rooms/${currentRoomCode}`));
       } else {
         await update(ref(db, `rooms/${currentRoomCode}`), {
