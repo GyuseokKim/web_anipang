@@ -1,1 +1,601 @@
-test
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>비트코인 시세 영향 인자 — 완전 통합 분석</title>
+
+:root {
+  --bg:      #04080f;
+  --panel:   #080e1c;
+  --panel2:  #0c1424;
+  --border:  #162032;
+  --border2: #1e2d45;
+  --btc:     #f7931a;
+  --btc2:    #f0b90b;
+  --green:   #00e5a0;
+  --red:     #ff3b6b;
+  --blue:    #4d9fff;
+  --cyan:    #00d4ff;
+  --purple:  #9b6dff;
+  --yellow:  #ffd166;
+  --orange:  #ff7c40;
+  --pink:    #ff6bb5;
+  --text:    #dde6f0;
+  --muted:   #4a637a;
+  --muted2:  #7a95ab;
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Noto Sans KR',sans-serif;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ── ANIMATED BG ── */
+body::before{
+  content:'';
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:
+    radial-gradient(ellipse 80% 40% at 10% 10%, rgba(247,147,26,.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 60% at 90% 80%, rgba(0,212,255,.04) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 50% 50%, rgba(77,159,255,.03) 0%, transparent 60%);
+  pointer-events:none;
+  z-index:0;
+}
+.wrap{position:relative;z-index:1}
+
+/* ── HERO ── */
+.hero{
+  padding:48px 48px 36px;
+  border-bottom:1px solid var(--border);
+  position:relative;overflow:hidden;
+}
+.hero-grid{
+  display:grid;grid-template-columns:1fr auto;
+  align-items:start;gap:32px;
+}
+.hero-tag{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(247,147,26,.1);border:1px solid rgba(247,147,26,.3);
+  color:var(--btc);font-family:'IBM Plex Mono',monospace;
+  font-size:10px;font-weight:700;letter-spacing:2.5px;
+  padding:5px 14px;border-radius:20px;margin-bottom:16px;
+}
+.hero-tag::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--btc);box-shadow:0 0 6px var(--btc);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.hero h1{
+  font-family:'Syne',sans-serif;
+  font-size:36px;font-weight:800;line-height:1.1;
+  background:linear-gradient(100deg, #dde6f0 0%, #f7931a 45%, #00d4ff 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:10px;
+}
+.hero-sub{font-size:13px;color:var(--muted2);line-height:1.7;max-width:680px}
+.hero-kpis{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:10px;min-width:260px;
+}
+.kpi{
+  background:var(--panel2);border:1px solid var(--border2);
+  border-radius:10px;padding:12px 16px;
+}
+.kpi-l{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;font-family:'IBM Plex Mono',monospace}
+.kpi-v{font-size:20px;font-weight:700;font-family:'IBM Plex Mono',monospace}
+.hero-line{
+  position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--btc),var(--cyan),transparent);
+}
+
+/* ── NAV ── */
+.nav-wrap{
+  background:rgba(8,14,28,.95);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;
+  backdrop-filter:blur(12px);
+}
+.nav{display:flex;padding:0 48px;overflow-x:auto;gap:0}
+.ntab{
+  padding:14px 20px;font-size:12px;font-weight:500;
+  color:var(--muted2);cursor:pointer;border-bottom:2px solid transparent;
+  white-space:nowrap;transition:all .2s;display:flex;align-items:center;gap:6px;
+  font-family:'Noto Sans KR',sans-serif;
+}
+.ntab:hover{color:var(--text)}
+.ntab.active{color:var(--btc);border-bottom-color:var(--btc)}
+
+/* ── MAIN ── */
+.main{padding:36px 48px;max-width:1400px;margin:0 auto}
+
+/* ── SECTIONS ── */
+.sec{display:none}
+.sec.active{display:block;animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── SEC HEADER ── */
+.sec-header{
+  display:flex;align-items:center;gap:16px;
+  margin-bottom:28px;padding-bottom:20px;
+  border-bottom:1px solid var(--border);
+}
+.sec-icon{font-size:32px}
+.sec-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;line-height:1.2}
+.sec-desc{font-size:12px;color:var(--muted2);margin-top:4px;line-height:1.6}
+
+/* ── GRID ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.g11{display:grid;grid-template-columns:repeat(11,1fr);gap:6px}
+@media(max-width:1100px){.g4{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr}}
+@media(max-width:800px){.g2,.g3,.g4{grid-template-columns:1fr}}
+
+/* ── CARD ── */
+.card{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:12px;padding:22px;margin-bottom:20px;
+  position:relative;overflow:hidden;
+}
+.card::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.05),transparent);
+}
+.ch{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;margin-bottom:6px}
+.ch .pip{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.csub{font-size:11px;color:var(--muted2);margin-bottom:18px;line-height:1.6}
+
+/* ── FACTOR CARD (overview) ── */
+.fc{
+  background:var(--panel2);border:1px solid var(--border2);
+  border-radius:12px;padding:18px 16px;
+  transition:border-color .2s,transform .15s;
+  cursor:default;position:relative;overflow:hidden;
+}
+.fc:hover{transform:translateY(-2px);border-color:var(--border2)}
+.fc-accent{position:absolute;top:0;left:0;right:0;height:2px;border-radius:12px 12px 0 0}
+.fc-rank{
+  font-family:'IBM Plex Mono',monospace;font-size:10px;
+  color:var(--muted);font-weight:700;margin-bottom:8px;
+}
+.fc-icon{font-size:24px;margin-bottom:8px;line-height:1}
+.fc-name{font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px}
+.fc-en{font-size:9px;color:var(--muted);margin-bottom:10px;letter-spacing:.3px}
+.fc-num{font-size:22px;font-weight:700;font-family:'IBM Plex Mono',monospace;margin-bottom:3px}
+.fc-dir{font-size:10px;font-weight:600;letter-spacing:.5px;margin-bottom:10px}
+.fc-bar{height:3px;background:var(--border);border-radius:2px;margin-bottom:8px}
+.fc-bar-fill{height:100%;border-radius:2px}
+.fc-note{font-size:9.5px;color:var(--muted2);line-height:1.5}
+.fc-signal{
+  display:inline-block;margin-top:8px;
+  padding:2px 8px;border-radius:8px;font-size:9px;font-weight:700;
+}
+
+/* ── SIGNAL LIGHTS ── */
+.sig-green{background:rgba(0,229,160,.12);color:var(--green);border:1px solid rgba(0,229,160,.25)}
+.sig-yellow{background:rgba(255,209,102,.1);color:var(--yellow);border:1px solid rgba(255,209,102,.2)}
+.sig-red{background:rgba(255,59,107,.1);color:var(--red);border:1px solid rgba(255,59,107,.2)}
+.sig-orange{background:rgba(255,124,64,.1);color:var(--orange);border:1px solid rgba(255,124,64,.2)}
+
+/* ── BADGE ── */
+.badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:9.5px;font-weight:700}
+.b-new{background:rgba(0,212,255,.12);color:var(--cyan);border:1px solid rgba(0,212,255,.2)}
+.b-old{background:rgba(74,99,122,.15);color:var(--muted2);border:1px solid rgba(74,99,122,.2)}
+.b-strong{background:rgba(0,229,160,.12);color:var(--green)}
+.b-mod{background:rgba(247,147,26,.12);color:var(--btc)}
+.b-weak{background:rgba(74,99,122,.15);color:var(--muted2)}
+.b-neg{background:rgba(255,59,107,.12);color:var(--red)}
+
+/* ── TABLE ── */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{
+  text-align:left;padding:9px 12px;font-size:10px;
+  color:var(--muted);font-weight:700;letter-spacing:.5px;
+  border-bottom:1px solid var(--border);text-transform:uppercase;
+}
+.tbl td{
+  padding:11px 12px;font-size:11px;
+  border-bottom:1px solid rgba(22,32,50,.6);
+  line-height:1.55;vertical-align:middle;
+}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(255,255,255,.012)}
+
+/* ── CORR MATRIX ── */
+.matrix{display:grid;gap:3px}
+.mx-cell{
+  padding:8px 4px;text-align:center;border-radius:6px;
+  font-size:10px;font-weight:700;font-family:'IBM Plex Mono',monospace;
+}
+.mx-label{
+  display:flex;align-items:center;
+  font-size:10px;color:var(--muted2);padding:6px 8px;font-weight:500;
+}
+
+/* ── GAUGE ── */
+.grow{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.gl{font-size:11px;color:var(--text);width:130px;flex-shrink:0;font-weight:500}
+.gtrack{flex:1;height:6px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden}
+.gfill{height:100%;border-radius:3px;transition:width 1.2s ease}
+.gpct{font-size:10px;font-family:'IBM Plex Mono',monospace;font-weight:700;width:38px;flex-shrink:0;text-align:right}
+.gdir{font-size:9px;color:var(--muted);width:32px;flex-shrink:0;text-align:right}
+
+/* ── INSIGHT BOX ── */
+.insight{
+  border-radius:10px;padding:16px 18px;margin-top:20px;
+  background:rgba(247,147,26,.04);border:1px solid rgba(247,147,26,.18);
+}
+.insight.blue{background:rgba(77,159,255,.04);border-color:rgba(77,159,255,.2)}
+.insight.green{background:rgba(0,229,160,.04);border-color:rgba(0,229,160,.2)}
+.insight.purple{background:rgba(155,109,255,.04);border-color:rgba(155,109,255,.2)}
+.insight-title{
+  font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  margin-bottom:8px;font-family:'IBM Plex Mono',monospace;
+}
+.insight p{font-size:12px;color:var(--muted2);line-height:1.85}
+.insight p strong{color:var(--text)}
+.insight p em{color:var(--btc2);font-style:normal;font-weight:600}
+
+/* ── TIMELINE ── */
+.tl{position:relative;padding-left:28px}
+.tl::before{
+  content:'';position:absolute;left:8px;top:4px;bottom:4px;
+  width:1px;background:linear-gradient(180deg,var(--btc),var(--border))
+}
+.tlitem{position:relative;margin-bottom:22px}
+.tlitem::before{
+  content:'';position:absolute;left:-24px;top:5px;
+  width:10px;height:10px;border-radius:50%;
+  border:2px solid var(--bg);
+}
+.tl-date{font-size:9px;font-family:'IBM Plex Mono',monospace;font-weight:700;letter-spacing:.5px;margin-bottom:3px}
+.tl-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}
+.tl-body{font-size:11px;color:var(--muted2);line-height:1.65}
+.tl-tag{
+  display:inline-block;margin-top:6px;
+  padding:2px 10px;border-radius:10px;font-size:10px;font-weight:700;
+  font-family:'IBM Plex Mono',monospace;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ── FOOTER ── */
+.footer{
+  border-top:1px solid var(--border);
+  padding:24px 48px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:12px;
+}
+.footer-note{font-size:10px;color:var(--muted);line-height:1.6}
+.footer-tag{
+  font-family:'IBM Plex Mono',monospace;font-size:10px;
+  color:var(--muted2);letter-spacing:1px;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ══ HERO ══ -->
+<div class="hero">
+  <div class="hero-grid">
+    <div>
+      <div class="hero-tag">₿ BITCOIN MACRO ANALYSIS · 2025</div>
+      <h1>비트코인 시세 영향 인자<br>완전 통합 분석</h1>
+      <p class="hero-sub">
+        기존 4대 인자(전기료·금리·반감기·금값) + 신규 7대 국제 경제지표(글로벌 M2·DXY·나스닥·VIX·유가/CPI·중국 위안화·기관 ETF)
+        — 총 11개 인자의 상관관계·메커니즘·현재 신호를 하나로 통합한 완전 분석 리포트
+      </p>
+    </div>
+    <div class="hero-kpis">
+      <div class="kpi"><div class="kpi-l">분석 인자</div><div class="kpi-v" style="color:var(--btc)">11개</div></div>
+      <div class="kpi"><div class="kpi-l">최강 상관</div><div class="kpi-v" style="color:var(--green)">+0.94</div></div>
+      <div class="kpi"><div class="kpi-l">BTC ATH</div><div class="kpi-v" style="color:var(--cyan)">$126K</div></div>
+      <div class="kpi"><div class="kpi-l">분석 기간</div><div class="kpi-v" style="color:var(--text);font-size:14px">2012–2025</div></div>
+    </div>
+  </div>
+  <div class="hero-line"></div>
+</div>
+
+<!-- ══ NAV ══ -->
+<div class="nav-wrap">
+  <div class="nav">
+    <div class="ntab active" onclick="sw(0)">① 전체 개요</div>
+    <div class="ntab" onclick="sw(1)">② 상관관계 분석</div>
+    <div class="ntab" onclick="sw(2)">③ 인자별 심층</div>
+    <div class="ntab" onclick="sw(3)">④ 역사적 이벤트</div>
+    <div class="ntab" onclick="sw(4)">⑤ 현재 신호</div>
+    <div class="ntab" onclick="sw(5)">⑥ 종합 결론</div>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- ════════════════════════════════════
+  SEC 0 : 전체 개요
+════════════════════════════════════ -->
+<div class="sec active" id="s0">
+  <div class="sec-header">
+    <div class="sec-icon">📊</div>
+    <div>
+      <div class="sec-title">전체 개요 — 11대 영향 인자 한눈에 보기</div>
+      <div class="sec-desc">기존 4대 + 신규 7대 인자의 상관 강도, 방향, 분류를 통합 정리</div>
+    </div>
+  </div>
+
+  <!-- 11 Factor Cards -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:24px">
+
+    <!-- 1 글로벌M2 -->
+    <div class="fc">
+      <div class="fc-accent" style="background:linear-gradient(90deg,var(--green),var(--cyan))"></div>
+      <div class="fc-rank">#1 최강 상관 <span class="badge b-new">신규</span></div>
+      <div class="fc-icon">💵</div>
+      <div class="fc-name">글로벌 M2 통화량</div>
+      <div class="fc-en">Global M2 Money Supply</div>
+      <div class="fc-num" style="color:var(--green)">+0.94</div>
+      <div class="fc-dir" style="color:var(--green)">강한 정(+) 상관</div>
+      <div class="fc-bar"><div class="fc-bar-fill" style="width:94%;background:linear-gradient(90deg,var(--green),var(--cyan))"></div></div>
+      <div class="fc-note">전세계 통화량↑ = BTC↑. ~70일 선행 효과.</div>
+      <span class="fc-signal sig-green">🟢 현재 우호</span>
+    </div>
+
+    <!-- 2 반감기 -->
+    <div class="fc">
+      <div class="fc-accent" style="background:linear-gradient(90deg,#22c55e,#16a34a)"></div>
+      <div class="fc-rank">#2 장기 최강 <span class="badge b-old">기존</span></div>
+      <div class="fc-icon">₿</div>
+      <div class="fc-name">비트코인 반감기</div>
+      <div class="fc-en">BTC Halving Cycle</div>
+      <div class="fc-num" style="color:#22c55e">+0.90</div>
+      <div class="fc-dir" style="color:#22c55e">강한 정(+) 상관</div>
+      <div class="fc-bar"><div class="fc-bar-fill" style="width:90%;background:#22c55e"></div></div>
+      <div class="fc-note">공급 직접 감소. 역대 4회 모두 장기 랠리 확인.</div>
+      <span class="fc-signal sig-green">🟢 사이클 중반</span>
+    </div>
+
+    <!-- 3 기관ETF -->
+    <div class="fc">
+      <div class="fc-accent" style="background:linear-gradient(90deg,var(--purple),var(--pink))"></div>
+      <div class="fc-rank">#3 2024 신규 <span class="badge b-new">신규</span></div>
+      <div class="fc-icon">🏦</div>
+      <div class="fc-name">기관 ETF 유입</div>
+      <div class="fc-en">Institutional ETF Flow</div>
+      <div class="fc-num" style="color:var(--purple)">+0.85</div>
+      <div class="fc-dir" style="color:var(--purple)">강한 정(+) 상관</div>
+      <div class="fc-bar"><div class="fc-bar-fill" style="width:85%;background:linear-gradient(90deg,var(--purple),var(--pink))"></div></div>
+      <div class="fc-note">BlackRock IBIT 등 $87B 누적. 일일 채굴 3배 흡수.</div>
+      <span class="fc-signal sig-green">🟢 지속 유입</span>
+    </div>
+
+    <!-- 4 미국금리 -->
+    <div class="fc">
+      <div class="fc-accent" style="background:linear-gradient(90deg,var(--red),#be123c)"></div>
+      <div class="fc-rank">#4 역상관 최강 <span class="badge b-old">기존</span></div>
+      <div class="fc-icon">🏛️</div>
+      <div class="fc-name">미국 기준금리</div>
+      <div class="fc-en">Fed Funds Rate</div>
+      <div class="fc-num" style="color:var(--red)">−0.80</div>
+      <div class="fc-dir" style="color:var(--red)">강한 역(−) 상관</div>
+      <div class="fc-bar"><div class="fc-bar-fill" style="width:80%;background:linear-gradient(90deg,var(--red),#be123c)"></div></div>
+      <div class="fc-note">금리↑=BTC↓. 유동성·기회비용·달러강세 경로.</div>
+      <span class="fc-signal sig-green">🟢 인하 사이클</span>
+    </div>
+
+    <!-- 5 나스닥 -->
+    <div class="fc">
+      <div class="fc-accent" style="background:linear-gradient(90deg,var(--blue),#6366f1)"></div>
+      <div class="fc-rank">#5 동조화 <span class="badge b-new">신규</span></div>
+      <div class="fc-icon">📈</div>
+      <div class="fc-name">나스닥 / S&P500</div>
+      <div class="fc-en">Nasdaq / S&P 500</div>
+      <div class="fc-num" style="color:var(--blue)">+0.77</div>
+      <div class="fc-dir" style="color:var(--blue)">강한 정(+) 상관</div>
+      <div class="fc-bar"><div class="fc-bar-fill" style="width:77%;background:linear-gradient(90deg,var(--blue),#6366f1)"></div></div>
+      <div class="fc-note">BTC = 고베타 테크 자산. 나스닥 하락의 1.8~2.1배 낙폭.</div>
+      <span class="fc-signal sig-yellow">🟡 변동성 구간</span>
+    </div>
+
+    <!-- 6 DXY -->
+    <div class="fc">
+      <div class="fc-accent" style="background:linear-gradient(90deg,var(--red),var(--orange))"></div>
+      <div class="fc-rank">#6 달러 헤지 <span class="badge b-new">신규</span></div>
+      <div class="fc-icon">📉</div>
+      <div class="fc-name">달러 인덱스 (DXY)</div>
+      <div class="fc-en">US Dollar Index</div>
+      <div class="fc-num" style="color:var(--red)">−0.72</div>
+      <div class="fc-dir" style="color:var(--red)">강한 역(−) 상관</div>
+      <div class="fc-bar"><div class="fc-bar-fill" style="width:72%;background:linear-gradient(90deg,var(--red),var(--orange))"></div></div>
+      <div class="fc-note">달러↑=BTC↓. 금값보다 21~27배 강한 영향력.</div>
+      <span class="fc-signal sig-green">🟢 약세 우호</span>
+    </div>
+
+    <!-- 7 VIX -->
+    <div class="fc">
+      <div class="fc-accent" style="background:linear-gradient(90deg,var(--orange),var(--red))"></div>
+      <div class="fc-rank">#7 공포 지표 <span class="badge b-new">신규</span></div>
+      <div class="fc-icon">😰</div>
+      <div class="fc-name">VIX 공포지수</div>
+      <div class="fc-en">CBOE Volatility Index</div>
+      <div class="fc-num" style="color:var(--orange)">−0.65</div>
+      <div class="fc-dir" style="color:var(--orange)">역(−) 상관</div>
+      <div class="fc-bar"><div class="fc-bar-fill" style="width:65%;background:linear-gradient(90deg,var(--orange),var(--red))"></div></div>
+      <div class="fc-note">VIX↑=BTC↓. 극단공포 후 역매수 기회 반복.</div>
+      <span class="fc-signal sig-orange">🟠 간헐 급등</span>
+    </div>
+
+    <!-- 8 위안화 -->
+    <div class="fc">
+      <div class="fc-accent" style="background:linear-gradient(90deg,var(--pink),var(--red))"></div>
+      <div class="fc-rank">#8 중국 변수 <span class="badge b-new">신규</span></div>
+      <div class="fc-icon">🐉</div>
+      <div class="fc-name">위안화 / 중국경제</div>
+      <div class="fc-en">CNY / China Economy</div>
+      <div class="fc-num" style="color:var(--pink)">−0.58</div>
+      <div class="fc-dir" style="color:var(--pink)">역(−)+자본도피 복합</div>
+      <div class="fc-bar"><div class="fc-bar-fill" style="width:58%;background:linear-gradient(90deg,var(--pink),var(--red))"></div></div>
+      <div class="fc-note">위안화 절하=중국 자본도피→BTC↑. 2013·2015 검증.</div>
+      <span class="fc-signal sig-yellow">🟡 절하 진행 중</span>
+    </div>
+
+    <!-- 9 전기료 -->
+    <div class="fc">
+      <div class="fc-accent" style="background:linear-gradient(90deg,var(--yellow),var(--btc))"></div>
+      <div class="fc-rank">#9 원가 하한선 <span class="badge b-old">기존</span></div>
+      <div class="fc-icon">⚡</div>
+      <div class="fc-name">전기료 (채굴 원가)</div>
+      <div class="fc-en">Electricity / Mining Cost</div>
+      <div class="fc-num" style="color:var(--yellow)">+0.55</div>
+      <div class="fc-dir" style="color:var(--yellow)">중간 정(+) 상관</div>
+      <div class="fc-bar"><div class="fc-bar-fill" style="width:55%;background:linear-gradient(90deg,var(--yellow),var(--btc))"></div></div>
+      <div class="fc-note">채굴 원가 = BTC 가격 구조적 하한선 역할.</div>
+      <span class="fc-signal sig-yellow">🟡 중립</span>
+    </div>
+
+    <!-- 10 유가·CPI -->
+    <div class="fc">
+      <div class="fc-accent" style="background:linear-gradient(90deg,var(--yellow),var(--orange))"></div>
+      <div class="fc-rank">#10 복합 인플레 <span class="badge b-new">신규</span></div>
+      <div class="fc-icon">🛢️</div>
+      <div class="fc-name">유가 / CPI 인플레</div>
+      <div class="fc-en">WTI Oil / CPI Inflation</div>
+      <div class="fc-num" style="color:var(--yellow)">복합</div>
+      <div class="fc-dir" style="color:var(--orange)">단기역(−) / 장기정(+)</div>
+      <div class="fc-bar"><div class="fc-bar-fill" style="width:50%;background:linear-gradient(90deg,var(--yellow),var(--orange))"></div></div>
+      <div class="fc-note">헤지 서사(호재) vs 금리 인상 유발(악재) 충돌.</div>
+      <span class="fc-signal sig-orange">🟠 지정학 리스크</span>
+    </div>
+
+    <!-- 11 금값 -->
+    <div class="fc">
+      <div class="fc-accent" style="background:linear-gradient(90deg,#FFD700,var(--btc2))"></div>
+      <div class="fc-rank">#11 약한 상관 <span class="badge b-old">기존</span></div>
+      <div class="fc-icon">🥇</div>
+      <div class="fc-name">국제 금값</div>
+      <div class="fc-en">Gold Price</div>
+      <div class="fc-num" style="color:#FFD700">+0.38</div>
+      <div class="fc-dir" style="color:#FFD700">약한 정(+) 가변</div>
+      <div class="fc-bar"><div class="fc-bar-fill" style="width:38%;background:linear-gradient(90deg,#FFD700,var(--btc2))"></div></div>
+      <div class="fc-note">장기 평균 +0.10. 2025년 강한 디커플링 발생.</div>
+      <span class="fc-signal sig-red">🔴 디커플링</span>
+    </div>
+
+  </div><!-- /factor grid -->
+
+  <!-- 전체 상관 강도 바 차트 -->
+  <div class="card">
+    <div class="ch"><span class="pip" style="background:var(--btc);box-shadow:0 0 6px var(--btc)"></span>11대 인자 상관계수 순위 — 절댓값 기준</div>
+    <div class="csub">색상 = 양(+)/음(−) 방향. 테두리 = 신규 인자. 기존 4대 인자는 회색 테두리.</div>
+    <svg viewBox="0 0 800 320" width="100%" style="overflow:visible">
+      <defs>
+        <marker id="ax" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto">
+          <path d="M0,0 L5,2.5 L0,5" fill="none" stroke="#4a637a" stroke-width="1"/>
+        </marker>
+      </defs>
+      <!-- Y axis -->
+      <line x1="160" y1="10" x2="160" y2="290" stroke="#162032" stroke-width="1"/>
+      <!-- grid lines -->
+      <line x1="160" y1="10" x2="775" y2="10" stroke="#162032" stroke-width=".4" stroke-dasharray="3,5"/>
+      <line x1="160" y1="82" x2="775" y2="82" stroke="#162032" stroke-width=".4" stroke-dasharray="3,5"/>
+      <line x1="160" y1="155" x2="775" y2="155" stroke="#162032" stroke-width=".4" stroke-dasharray="3,5"/>
+      <line x1="160" y1="228" x2="775" y2="228" stroke="#162032" stroke-width=".4" stroke-dasharray="3,5"/>
+      <text x="155" y="13" fill="#4a637a" font-size="7" text-anchor="end">1.00</text>
+      <text x="155" y="85" fill="#4a637a" font-size="7" text-anchor="end">0.75</text>
+      <text x="155" y="158" fill="#4a637a" font-size="7" text-anchor="end">0.50</text>
+      <text x="155" y="231" fill="#4a637a" font-size="7" text-anchor="end">0.25</text>
+
+      <!-- data: [x, y_top, h, color, label, val, signal, isNew] -->
+      <!-- M2 0.94 -->
+      <g>
+        <rect x="168" y="18" width="52" height="272" rx="5" fill="url(#bM2)" stroke="none"/>
+        <rect x="168" y="18" width="52" height="272" rx="5" fill="none" stroke="rgba(0,229,160,.5)" stroke-width="1"/>
+        <text x="194" y="12" fill="var(--green)" font-size="9" font-weight="700" text-anchor="middle">0.94</text>
+        <text x="194" y="305" fill="#7a95ab" font-size="8" text-anchor="middle">글로벌 M2</text>
+        <text x="194" y="315" fill="#4a637a" font-size="7" text-anchor="middle">💵 신규</text>
+      </g>
+      <!-- 반감기 0.90 -->
+      <g>
+        <rect x="228" y="28" width="52" height="262" rx="5" fill="url(#bHal)"/>
+        <text x="254" y="22" fill="#22c55e" font-size="9" font-weight="700" text-anchor="middle">0.90</text>
+        <text x="254" y="305" fill="#7a95ab" font-size="8" text-anchor="middle">반감기</text>
+        <text x="254" y="315" fill="#4a637a" font-size="7" text-anchor="middle">₿ 기존</text>
+      </g>
+      <!-- ETF 0.85 -->
+      <g>
+        <rect x="288" y="42" width="52" height="248" rx="5" fill="url(#bETF)" stroke="none"/>
+        <rect x="288" y="42" width="52" height="248" rx="5" fill="none" stroke="rgba(155,109,255,.5)" stroke-width="1"/>
+        <text x="314" y="36" fill="var(--purple)" font-size="9" font-weight="700" text-anchor="middle">0.85</text>
+        <text x="314" y="305" fill="#7a95ab" font-size="8" text-anchor="middle">기관 ETF</text>
+        <text x="314" y="315" fill="#4a637a" font-size="7" text-anchor="middle">🏦 신규</text>
+      </g>
+      <!-- 금리 0.80 -->
+      <g>
+        <rect x="348" y="54" width="52" height="236" rx="5" fill="url(#bRate)"/>
+        <text x="374" y="48" fill="var(--red)" font-size="9" font-weight="700" text-anchor="middle">−0.80</text>
+        <text x="374" y="305" fill="#7a95ab" font-size="8" text-anchor="middle">미국 금리</text>
+        <text x="374" y="315" fill="#4a637a" font-size="7" text-anchor="middle">🏛️ 기존</text>
+      </g>
+      <!-- 나스닥 0.77 -->
+      <g>
+        <rect x="408" y="64" width="52" height="226" rx="5" fill="url(#bNas)" stroke="none"/>
+        <rect x="408" y="64" width="52" height="226" rx="5" fill="none" stroke="rgba(77,159,255,.4)" stroke-width="1"/>
+        <text x="434" y="58" fill="var(--blue)" font-size="9" font-weight="700" text-anchor="middle">+0.77</text>
+        <text x="434" y="305" fill="#7a95ab" font-size="8" text-anchor="middle">나스닥</text>
+        <text x="434" y="315" fill="#4a637a" font-size="7" text-anchor="middle">📈 신규</text>
+      </g>
+      <!-- DXY 0.72 -->
+      <g>
+        <rect x="468" y="76" width="52" height="214" rx="5" fill="url(#bDXY)" stroke="none"/>
+        <rect x="468" y="76" width="52" height="214" rx="5" fill="none" stroke="rgba(255,59,107,.4)" stroke-width="1"/>
+        <text x="494" y="70" fill="var(--red)" font-size="9" font-weight="700" text-anchor="middle">−0.72</text>
+        <text x="494" y="305" fill="#7a95ab" font-size="8" text-anchor="middle">DXY</text>
+        <text x="494" y="315" fill="#4a637a" font-size="7" text-anchor="middle">📉 신규</text>
+      </g>
+      <!-- VIX 0.65 -->
+      <g>
+        <rect x="528" y="100" width="52" height="190" rx="5" fill="url(#bVIX)" stroke="none"/>
+        <rect x="528" y="100" width="52" height="190" rx="5" fill="none" stroke="rgba(255,124,64,.4)" stroke-width="1"/>
+        <text x="554" y="94" fill="var(--orange)" font-size="9" font-weight="700" text-anchor="middle">−0.65</text>
+        <text x="554" y="305" fill="#7a95ab" font-size="8" text-anchor="middle">VIX</text>
+        <text x="554" y="315" fill="#4a637a" font-size="7" text-anchor="middle">😰 신규</text>
+      </g>
+      <!-- 위안화 0.58 -->
+      <g>
+        <rect x="588" y="123" width="52" height="167" rx="5" fill="url(#bCNY)" stroke="none"/>
+        <rect x="588" y="123" width="52" height="167" rx="5" fill="none" stroke="rgba(255,107,181,.4)" stroke-width="1"/>
+        <text x="614" y="117" fill="var(--pink)" font-size="9" font-weight="700" text-anchor="middle">−0.58</text>
+        <text x="614" y="305" fill="#7a95ab" font-size="8" text-anchor="middle">위안화</text>
+        <text x="614" y="315" fill="#4a637a" font-size="7" text-anchor="middle">🐉 신규</text>
+      </g>
+      <!-- 전기료 0.55 -->
+      <g>
+        <rect x="648" y="132" width="52" height="158" rx="5" fill="url(#bElec)"/>
+        <text x="674" y="126" fill="var(--yellow)" font-size="9" font-weight="700" text-anchor="middle">+0.55</text>
+        <text x="674" y="305" fill="#7a95ab" font-size="8" text-anchor="middle">전기료</text>
+        <text x="674" y="315" fill="#4a637a" font-size="7" text-anchor="middle">⚡ 기존</text>
+      </g>
+      <!-- 유가/CPI ~0.45 -->
+      <g>
+        <rect x="708" y="158" width="52" height="132" rx="5" fill="url(#bOil)" stroke="none"/>
+        <rect x="708" y="158" width="52" height="132" rx="5" fill="none" stroke="rgba(255,209,102,.3)" stroke-width="1"/>
+        <text x="734" y="152" fill="var(--yellow)" font-size="9" font-weight="700" text-anchor="middle">복합</text>
+        <text x="734" y="305" fill="#7a95ab" font-size="8" text-anchor="middle">유가/CPI</text>
+        <text x="734" y="315" fill="#4a637a" font-size="7" text-anchor="middle">🛢️ 신규</text>
+      </g>
+      <!-- 금값 0.38 -->
+      <!-- no separate bar for gold, it's below oil effectively -->
+
+      <!-- gradients -->
+      <defs>
+        <linearGradient id="bM2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#00e5a0" stop-opacity=".5"/><stop offset="100%" stop-color="#00e5a0" stop-opacity=".05"/></linearGradient>
+        <linearGradient id="bHal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#22c55e" stop-opacity=".35"/><stop offset="100%" stop-color="#22c55e" stop-opacity=".04"/></linearGradient>
+        <linearGradient id="bETF" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#9b6dff" stop-opacity=".5"/><stop offset="100%" stop-color="#9b6dff" stop-opacity=".05"/></linearGradient>
+        <linearGradient id="bRate" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ff3b6b" stop-opacity=".35"/><stop offset="100%" stop-color="#ff3b6b" stop-opacity=".04"/></linearGradient>
+        <linearGradient id="bNas" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4d9fff" stop-opacity=".4"/><stop offset="100%" stop-color="#4d9fff" stop-opacity=".05"/></linearGradient>
+        <linearGradient id="bDXY" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ff3b6b" stop-opacity=".35"/><stop offset="100%" stop-color="#ff3b6b" stop-opacity=".04"/></linearGradient>
+        
